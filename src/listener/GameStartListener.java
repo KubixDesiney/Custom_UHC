@@ -31,6 +31,7 @@ import com.connorlinfoot.titleapi.TitleAPI;
 
 import events.GameStartEvent;
 import events.gameEndEvent;
+import gamemodes.Gamestatus;
 import teams.UHCTeamManager;
 import test.main;
 import decoration.ScoreboardHandler;
@@ -49,6 +50,8 @@ import decoration.ScoreboardHandler;
 		public void onGameStart(GameStartEvent e) {
 		    World world = Bukkit.getWorlds().get(0);
 		    Bukkit.broadcastMessage("Game started");
+		    int alive = Bukkit.getOnlinePlayers().size();
+		    Gamestatus.setAlive(alive);
 
 		    if (world != null) {
 		        // Set game rules for UHC

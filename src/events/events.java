@@ -42,6 +42,12 @@ public class events implements Listener {
 		Player player = event.getPlayer();
 		int mode = gamemode.getMode();
 		System.out.print("gamemode: "+mode);
+		int gamestatus = Gamestatus.getStatus();
+        if (!player.isOp()) {
+        	if (gamestatus == 0) {
+        		player.getInventory().clear();
+        }
+        }
 	    Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
 	    
 	    if (scoreboard.getObjective("showhealth") != null) {
@@ -59,7 +65,7 @@ public class events implements Listener {
 		}else if (mode == 1) {
 			player.sendMessage("   §7§l⦁ §e§lGAMEMODE §r§c§l UHC WEREWOLF");
 		} else if (mode == 2) {
-			player.sendMessage("   §7§l⦁ §e§lGAMEMODE §r§6§lUHC CLASSIC");
+			player.sendMessage("   §7§l⦁ §e§lGAMEMODE §r§6§lUHC SWITCH");
 		}
 		player.sendMessage(" ");
 		player.sendMessage("   §7§l⦁ §9§lDISCORD §r§8[§eclick§8]");

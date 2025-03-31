@@ -87,10 +87,20 @@ public class ScoreboardHandler implements Listener {
     private void updateDynamicScoreboard(Player player, SimpleScoreboard simpleScoreboard) {
         String gamename = gameconfig.getGameName();
         simpleScoreboard.setTitle("§6§l" + gamename);
+        
         long elapsedTime = gameconfig.getGameElapsedTime();
+
         int minutes = (int) (elapsedTime / 60000);
         int seconds = (int) ((elapsedTime / 1000) % 60);
-        String formattedTime = String.format("%02d:%02d", minutes, seconds);
+        int hours = (int) (elapsedTime / 3600000);  
+
+        if (minutes >= 60) {
+            minutes = minutes % 60;  
+            hours = hours + 1;       
+        }
+
+        String formattedTime = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+
         simpleScoreboard.add("§eTimer : §b" + formattedTime, 13);
 
         int pvpTime = gameconfig.getPvPTime();

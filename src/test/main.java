@@ -2,6 +2,7 @@ package test;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Objective;
@@ -12,6 +13,7 @@ import Rules.gameconfig;
 import commands.CommandCenter;
 import decoration.ScoreboardHandler;
 import events.events;
+import gamemodes.Gamestatus;
 import gamemodes.SwitchUHC;
 import listener.DamageTracker;
 import listener.GameStartListener;
@@ -32,16 +34,24 @@ public class main extends JavaPlugin{
 	
 	@Override
 	public void onEnable() {
+		
+		int gamestatus = Gamestatus.getStatus();
+		if (gamestatus == 1) {
+			int switchInterval = gameconfig.getSwitchTime();// Set the interval in minutes
+			switchUHC = new SwitchUHC(this, teamManager, switchInterval);
+			distanceTracker = new TeamDistanceTracker(teamManager);
 
-		int switchInterval = gameconfig.getSwitchTime();// Set the interval in minutes
-        switchUHC = new SwitchUHC(this, teamManager, switchInterval);
-        distanceTracker = new TeamDistanceTracker(teamManager);
-
-        Bukkit.getScheduler().runTaskTimer(this, () -> {
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                distanceTracker.updateHotBar(player);
-            }
-        }, 0L, 1L); // Update every 10 seconds (200 ticks)
+			Bukkit.getScheduler().runTaskTimer(this, () -> {
+            	for (Player player : Bukkit.getOnlinePlayers()) {
+            		distanceTracker.updateHotBar(player);
+            	}
+			}, 0L, 1L); // Update every 10 seconds (200 ticks)
+		} else {
+			World world = Bukkit.getWorld("world");
+			world.setPVP(false);
+	        world.setGameRuleValue("doWeatherCycle", "false");  
+	        world.setGameRuleValue("doDaylightCycle", "false");
+		}
 		instance = this;
 		saveDefaultConfig();
 		

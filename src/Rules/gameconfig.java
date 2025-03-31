@@ -11,6 +11,8 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
+import org.bukkit.block.Block;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -21,6 +23,7 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.BrewEvent;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -30,14 +33,16 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.Potion;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import com.connorlinfoot.titleapi.TitleAPI;
 
 import decoration.ScoreboardHandler;
 import events.GameStartEvent;
 import events.TeamSizeChangedEvent;
 import gamemodes.Gamestatus;
+import gamemodes.gamemode;
 import teams.UHCTeamManager;
 
 import java.util.ArrayList;
@@ -123,6 +128,141 @@ public class gameconfig implements Listener {
 
         player.openInventory(menu);
     }
+    private boolean cutCleanEnabled = false;
+    public void openScenariosMenu(Player player) {
+        Inventory scenariosMenu = Bukkit.createInventory(null, 54, ChatColor.GOLD + "Scenarios");
+
+        // Wagons
+        addItem1(scenariosMenu, 2, Material.STORAGE_MINECART, "§eScenario 1");
+        addItem1(scenariosMenu, 6, Material.EXPLOSIVE_MINECART, "§eScenario 2", "§7Click to open the Gamemode menu.");
+
+        // Line 3
+        addItem1(scenariosMenu, 18, Material.EXP_BOTTLE, "§eExperience Bottles");
+        addItem1(scenariosMenu, 19, Material.ANVIL, "§eAnvil");
+        addItem1(scenariosMenu, 20, Material.BOOKSHELF, "§eLibrary");
+        addItem1(scenariosMenu, 21, Material.ENCHANTMENT_TABLE, "§eEnchanting Table");
+        addItem1(scenariosMenu, 22, Material.REDSTONE, "§eRedstone");
+        addItem1(scenariosMenu, 23, Material.REDSTONE_ORE, "§eRedstone Ore");
+        addItem1(scenariosMenu, 24, Material.DIAMOND_ORE, "§eDiamond Ore");
+        addItem1(scenariosMenu, 25, Material.DIAMOND, "§eDiamond");
+        addItem1(scenariosMenu, 26, Material.IRON_INGOT, "§eIron");
+
+        // Line 4
+        addItem1(scenariosMenu, 27, Material.GOLD_CHESTPLATE, "§eGold Chestplate");
+        addItem1(scenariosMenu, 28, Material.TNT, "§eTNT");
+        addItem1(scenariosMenu, 29, Material.ENCHANTED_BOOK, "§eEnchanted Book");
+        addItem1(scenariosMenu, 30, Material.DIAMOND_BOOTS, "§eDiamond Boots");
+        addItem1(scenariosMenu, 31, Material.LADDER, "§eLadder");
+        addItem1(scenariosMenu, 32, Material.WOOD, "§eWood");
+        addItem1(scenariosMenu, 33, Material.CHEST, "§eChest");
+        addItem2(scenariosMenu, 35, createCutCleanItem());
+
+        // Line 5
+        addItem(scenariosMenu, 36, Material.POTION, "§ePotion");
+        addItem1(scenariosMenu, 37, Material.FISHING_ROD, "§eFishing Rod");
+        addItem1(scenariosMenu, 38, Material.APPLE, "§eApple");
+        addItem1(scenariosMenu, 39, Material.BOW, "§eBow");
+        addItem1(scenariosMenu, 40, Material.IRON_AXE, "§eAxe");
+        addItem1(scenariosMenu, 41, Material.BREAD, "§eBread");
+        addItem1(scenariosMenu, 42, Material.IRON_SWORD, "§eIron Sword");
+        addItem1(scenariosMenu, 43, Material.COOKIE, "§eCookie");
+        addItem1(scenariosMenu, 44, Material.NETHER_STAR, "§eNether Star");
+
+        // Navigation
+        addItem1(scenariosMenu, 49, Material.ARROW, "§cReturn to Main Menu");
+        addItem1(scenariosMenu, 50, Material.PAPER, "§eNext Page");
+
+        player.openInventory(scenariosMenu);
+    }
+ // ✅ Fix addItem1 to Work for All Items
+    private void addItem1(Inventory inv, int slot, Material material, String name, String... lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(name);
+            meta.setLore(Arrays.asList(lore));
+            item.setItemMeta(meta);
+        }
+        inv.setItem(slot, item);
+    }
+
+    // ✅ Fix addItem1 to Accept Custom ItemStacks
+    private void addItem2(Inventory inv, int slot, ItemStack item) {
+        if (item != null) {
+            inv.setItem(slot, item);
+        }
+    }
+    public void openGamemodeMenu(Player player) {
+        Inventory gamemodeMenu = Bukkit.createInventory(null, 9, ChatColor.RED + "Game Modes");
+
+        addItem(gamemodeMenu, 0, Material.MONSTER_EGG, "§c§lUHC WEREWOLF", "§7Click to set gamemode.", "§6➢ §eGamemode: §aUHC WEREWOLF");
+        addItem(gamemodeMenu, 1, Material.BOW, "§e§lUHC SWITCH", "§7Click to set gamemode.", "§6➢ §eGamemode: §aUHC SWITCH");
+        addItem(gamemodeMenu, 2, Material.GOLDEN_APPLE, "§4MOLE UHC", "§7Click to set gamemode.", "§6➢ §eGamemode: §aMole UHC");
+        addItem(gamemodeMenu, 8, Material.ARROW, "§cReturn to Scenarios");
+
+        player.openInventory(gamemodeMenu);
+    }
+    @EventHandler
+    public void onInventoryClick5(InventoryClickEvent event) {
+        if (event.getClickedInventory() == null) return;
+
+        Player player = (Player) event.getWhoClicked();
+        ItemStack item = event.getCurrentItem();
+        if (item == null || item.getType() == Material.AIR) return;
+
+        // Prevent moving items in menus
+        if (event.getView().getTitle().contains("Game Configuration") || event.getView().getTitle().contains("Scenarios") || event.getView().getTitle().contains("Game Modes")) {
+            event.setCancelled(true);
+        }
+
+        // Handle scenario clicks
+        if (event.getView().getTitle().contains("Scenarios")) {
+            if (item.getType() == Material.EXPLOSIVE_MINECART) {
+                openGamemodeMenu(player);
+            } else if (item.getType() == Material.COAL) {
+                cutCleanEnabled = !cutCleanEnabled;
+                openScenariosMenu(player);
+            } else if (item.getType() == Material.ARROW) {
+                openMenu(player);
+            }
+        }
+
+        // Handle gamemode changes
+        if (event.getView().getTitle().contains("Game Modes")) {
+            if (item.getType() == Material.MONSTER_EGG) {
+                gamemode.setMode(1);
+            } else if (item.getType() == Material.BOW) {
+                gamemode.setMode(2);
+            } else if (item.getType() == Material.GOLDEN_APPLE) {
+                gamemode.setMode(0);
+            } else if (item.getType() == Material.ARROW) {
+                openScenariosMenu(player);
+            }
+        }
+    }
+    public void onItemDrop(PlayerDropItemEvent event) {
+        if (event.getPlayer().getOpenInventory().getTitle().contains("Game Configuration") || event.getPlayer().getOpenInventory().getTitle().contains("Scenarios") || event.getPlayer().getOpenInventory().getTitle().contains("Game Modes")) {
+            event.setCancelled(true);
+        }
+    }
+    private ItemStack createCutCleanItem() {
+        // Always return 1 coal, even if cutClean is disabled
+        ItemStack cutCleanItem = new ItemStack(Material.COAL, 1);  
+        ItemMeta meta = cutCleanItem.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§eCutClean");
+            // Show whether it's enabled or not
+            meta.setLore(Arrays.asList(cutCleanEnabled ? "§aEnabled" : "§cDisabled"));
+            if (cutCleanEnabled) {
+                meta.addEnchant(Enchantment.LUCK, 1, true);  // Adds enchantment if enabled
+            }
+            cutCleanItem.setItemMeta(meta);
+        }
+        return cutCleanItem;
+    }
+
+    
+
     private boolean strengthPotionEnabled = false;
     private boolean poisonPotionEnabled = false;
     private boolean healingPotionEnabled = false;
@@ -717,6 +857,10 @@ public class gameconfig implements Listener {
             	openDrop(player);
             } else if (event.getSlot() == 11) {
             	openPotionMenu(player);
+            } else if (event.getSlot() == 27) {
+            	openScenariosMenu(player);
+            } else if (event.getSlot() == 31 ) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "/start");
             }
         }
     }
@@ -1109,6 +1253,57 @@ public void onEntityDeath1(EntityDeathEvent event) {
     event.setDroppedExp(boostedXp); // Set new XP amount
 
     // Debugging
+}
+@EventHandler
+public void onBlockBreak2(BlockBreakEvent event) {
+    if (cutCleanEnabled) {
+        Player player = event.getPlayer();
+        Block block = event.getBlock();
+        int xpBoost = dropRates.getOrDefault("XP_BOTTLE", 0);
+        int boostedXp = (int) (1 * (1+ (xpBoost /100.0)));
+        Material blockType = block.getType();
+        
+        // Cancel the default block break so that the natural drops are prevented
+        event.setCancelled(true);
+
+        // Check if the block is Iron Ore or Gold Ore
+        if (blockType == Material.IRON_ORE) {
+        	player.giveExp(boostedXp);
+            block.getWorld().dropItemNaturally(block.getLocation(), new ItemStack(Material.IRON_INGOT));
+        } else if (blockType == Material.GOLD_ORE) {
+        	player.giveExp(boostedXp);
+            block.getWorld().dropItemNaturally(block.getLocation(), new ItemStack(Material.GOLD_INGOT));
+        }
+
+        // Break the block manually to simulate the block breaking animation
+        block.setType(Material.AIR);
+    }
+}
+
+
+
+@EventHandler
+public void onEntityDeath2(EntityDeathEvent event) {
+    if (cutCleanEnabled && event.getEntity() instanceof Player == false) {  // Exclude players
+        // Get the entity type
+        EntityType entityType = event.getEntityType();
+        
+        // Check if the entity is an animal
+        if (entityType == EntityType.COW) {
+            event.getDrops().clear();  // Remove all drops
+            event.getEntity().getWorld().dropItemNaturally(event.getEntity().getLocation(), new ItemStack(Material.COOKED_BEEF));
+        } else if (entityType == EntityType.PIG) {
+            event.getDrops().clear();  // Remove all drops
+            event.getEntity().getWorld().dropItemNaturally(event.getEntity().getLocation(), new ItemStack(Material.PORK));
+        } else if (entityType == EntityType.CHICKEN) {
+            event.getDrops().clear();  // Remove all drops
+            event.getEntity().getWorld().dropItemNaturally(event.getEntity().getLocation(), new ItemStack(Material.COOKED_CHICKEN));
+        } else if (entityType == EntityType.SHEEP) {
+            event.getDrops().clear();  // Remove all drops
+            event.getEntity().getWorld().dropItemNaturally(event.getEntity().getLocation(), new ItemStack(Material.COOKED_MUTTON));
+        }
+        // Add more animals if needed
+    }
 }
 }
 
