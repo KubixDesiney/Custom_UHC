@@ -30,3 +30,6 @@ commands:
    team:
        description: team gestion
        usage: /team
+   mod:
+       description: mod
+       usage: /mod

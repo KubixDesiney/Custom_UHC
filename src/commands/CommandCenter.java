@@ -69,6 +69,14 @@ public class CommandCenter implements CommandExecutor{
 		}
 			
 		}
+		if (cmd.getName().equalsIgnoreCase("mod")) {
+			if(sender.isOp()) {
+				String message = String.join(" ", args);
+				Bukkit.broadcastMessage(" ");
+				Bukkit.broadcastMessage("§7§l〉 §r§c§lFOUNDER §r§c"+sender.getName()+" §8► §r§e"+message);
+				Bukkit.broadcastMessage(" ");
+			}
+		}
 		if (cmd.getName().equalsIgnoreCase("addslot")) {
 			if (args.length != 1) {
 				Player player = (Player) sender;

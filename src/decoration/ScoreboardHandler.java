@@ -171,7 +171,7 @@ public class ScoreboardHandler implements Listener {
 
         // Update scoreboard with the new arrow and distance
         simpleScoreboard.add("§7--Players--", 16);
-        simpleScoreboard.add("§eTeams:§f"+Gamestatus.getAlive()+ " §7(" + Bukkit.getOnlinePlayers().size() + "§7)", 15);
+        simpleScoreboard.add("§eTeams:§7 "+Gamestatus.getAlive()+ " §7(" + Bukkit.getOnlinePlayers().size() + "§7)", 15);
         simpleScoreboard.add("§7--Time--", 14);
         simpleScoreboard.add("§ePvP : §b" + formattedPvPTime, 12);
         simpleScoreboard.add("§eMeetup : §b" + formattedMeetupTime, 11);

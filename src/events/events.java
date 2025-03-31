@@ -96,7 +96,11 @@ public class events implements Listener {
 	        // Check if the entity is a player
 	        if (event.getEntity() instanceof Player) {
 	            Player player = (Player) event.getEntity();
-
+	            int dead = 0;
+	             dead = +1;
+	             int alive = Gamestatus.getAlive();
+	             Gamestatus.setAlive(alive - dead);
+	            
 	            // Get the location of the player's death
 	            Location deathLocation = player.getLocation();
 	            String teamName = teamManager.getPlayerTeam(player);

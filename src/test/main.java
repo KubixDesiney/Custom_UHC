@@ -77,6 +77,7 @@ public class main extends JavaPlugin{
 		getCommand("finish").setExecutor(commandCenter);
 		getCommand("enchant").setExecutor(commandCenter);
 		getCommand("team").setExecutor(commandCenter);
+		getCommand("mod").setExecutor(commandCenter);
 		getServer().getPluginManager().registerEvents(damageTracker, this);
 	    getServer().getPluginManager().registerEvents(new GlobalVariableListener(teamManager, configManager), this);
 	    getServer().getPluginManager().registerEvents(new TeamChatListener(new UHCTeamManager(this)), this);

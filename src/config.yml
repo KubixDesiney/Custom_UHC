@@ -4,13 +4,13 @@ teams:
     - "Green"
     - "Blue"
     - "Yellow"
-    - "Dark_Red"
+    - "Black"
   colors:
     - "RED"
     - "GREEN"
     - "BLUE"
     - "YELLOW"
-    - "DARK_RED"
+    - "BLACK"
 drop_rates:
     APPLE: 0
     GOLDEN_APPLE: 0

@@ -860,7 +860,7 @@ public class gameconfig implements Listener {
             } else if (event.getSlot() == 27) {
             	openScenariosMenu(player);
             } else if (event.getSlot() == 31 ) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "/start");
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "start");
             }
         }
     }
