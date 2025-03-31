@@ -11,5 +11,12 @@ public class Gamestatus {
         System.out.println("[DEBUG] Gamestatus set to: " + newstatus);
         currentstatus = newstatus;
     }
+    private static int currentalive = 0;
+    public static int getAlive() {
+    	return currentalive;
+    }
+    public static void setAlive(int newalive) {
+    	currentalive = newalive;
+    }
 }
 

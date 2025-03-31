@@ -37,10 +37,7 @@ public class TeamChatListener implements Listener {
         } else {
             // Team chat
             if (teamName != null) {
-                // Get the team data
-                UHCTeamManager.TeamData teamData = teamManager.getTeamData(teamName);
-                // Only allow the message to be sent to players in the same team
-                event.setFormat(teamData.color + "[" + teamName + "] " + player.getName() + ": " + message);
+                event.setFormat( "[" + teamName + "] " + player.getName() + ": " + message);
             }
         }
     }

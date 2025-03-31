@@ -2,7 +2,6 @@ package test;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Objective;
@@ -13,24 +12,36 @@ import Rules.gameconfig;
 import commands.CommandCenter;
 import decoration.ScoreboardHandler;
 import events.events;
+import gamemodes.SwitchUHC;
 import listener.DamageTracker;
 import listener.GameStartListener;
 import listener.GlobalVariableListener;
 import listener.TeamChatListener;
 import teams.ConfigManager;
+import teams.TeamDistanceTracker;
 import teams.UHCTeamManager;
 
 public class main extends JavaPlugin{
+    private SwitchUHC switchUHC;
     private ConfigManager configManager;
 	private UHCTeamManager teamManager;
 	private DamageTracker damageTracker;
+    private TeamDistanceTracker distanceTracker;
 	private static main instance;
 	
 	
 	@Override
 	public void onEnable() {
 
-		
+		int switchInterval = gameconfig.getSwitchTime();// Set the interval in minutes
+        switchUHC = new SwitchUHC(this, teamManager, switchInterval);
+        distanceTracker = new TeamDistanceTracker(teamManager);
+
+        Bukkit.getScheduler().runTaskTimer(this, () -> {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                distanceTracker.updateHotBar(player);
+            }
+        }, 0L, 1L); // Update every 10 seconds (200 ticks)
 		instance = this;
 		saveDefaultConfig();
 		
@@ -105,7 +116,6 @@ public class main extends JavaPlugin{
     public DamageTracker getDamageTracker() {
         return damageTracker;
     }
-
 		
 
 }

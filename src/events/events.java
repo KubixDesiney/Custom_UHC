@@ -24,6 +24,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.Scoreboard;
 
+import gamemodes.Gamestatus;
 import gamemodes.gamemode;
 import teams.UHCTeamManager;
 import test.main;
@@ -162,6 +163,9 @@ public class events implements Listener {
 	public static void onPlayerDeath (PlayerDeathEvent event) {
 		Player player =  event.getEntity();
 		boolean specvalue = spec.getspect();
+		int playersAlive = Gamestatus.getAlive();
+		playersAlive--;
+		Gamestatus.setAlive(playersAlive);
 		if(specvalue == false) {
 		    new BukkitRunnable() {
 	            @Override

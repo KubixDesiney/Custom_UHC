@@ -18,16 +18,20 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.inventory.BrewEvent;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.BrewerInventory;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.Potion;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import decoration.ScoreboardHandler;
@@ -37,6 +41,7 @@ import gamemodes.Gamestatus;
 import teams.UHCTeamManager;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -92,15 +97,25 @@ public class gameconfig implements Listener {
 
         addTeamConfigItem(menu,1);
         addItem(menu, 2, Material.EYE_OF_ENDER, "§eSpectators Configuration", "§7Control §aaccess §7to spectators.", "", "§e➢ §7Status: ", "", "§6§l➢ §eClick to change");
-        addItem(menu, 3, Material.LAPIS_BLOCK, "§eInitial Border", "§7Set the §asize §7of the starting border.", "", "§e➢ §7Status: ", "", "§6§l➢ §eClick to proceed");
-        addItem(menu, 4, Material.REDSTONE_BLOCK, "§eFinal Border", "§7Set the §asize §7of the final border.", "", "§e➢ §7Status: ", "", "§6§l➢ §eClick to proceed");
-        addItem(menu, 5, Material.WATCH, "§eBorder Speed", "§7Control the §aborder speed.", "", "§e➢ §7Status: ", "", "§6§l➢ §eClick to adjust");
+        addItem(menu, 3, Material.LAPIS_BLOCK, "§eInitial Border", "§7Set the §asize §7of the starting border.", "", "§e➢ §7Status: §a"+world.getWorldBorder().getSize()+" §7(+"+world.getWorldBorder().getSize()+"§7/-"+world.getWorldBorder().getSize(), " ", "§6§l➢ §eClick to proceed");
+        addItem(menu, 4, Material.REDSTONE_BLOCK, "§eFinal Border", "§7Set the §asize §7of the final border.", "", "§e➢ §7Status: §a"+finalBorderSize+"§7(+"+finalBorderSize / 2+"§7/-"+finalBorderSize /2, "", "§6§l➢ §eClick to proceed");
+        addItem(menu, 5, Material.WATCH, "§eBorder Speed", "§7Control the §aborder speed.", "", "§e➢ §7Status: §a"+borderSpeed+" §ablocs/sec", "", "§6§l➢ §eClick to adjust");
         addItem(menu, 6, Material.BARRIER, "§eBorder Start Time", "§7Control the time before the border shrinks.", "", "§e➢ §7Time: §e"+formatTime(meetupTime), "", "§6§l➢ §eClick to proceed");
         addItem(menu, 7, Material.DIAMOND_SWORD, "§ePvP Time", "§7Set the time before §aPvP §7is enabled.", "", "§e➢ §7Time: §e"+formatTime(pvpTime), "", "§6§l➢ §eClick to proceed");
-        addItem(menu, 8, Material.PORTAL, "§eNether Access", "§7Toggle §aNether access.", "", "§e➢ §7Status: ", "", "§6§l➢ §eClick to change");
+        addItem(menu, 8, Material.NETHERRACK, "§eNether Access", "§7Toggle §aNether access.", "", "§e➢ §7Status: ", "", "§6§l➢ §eClick to change");
         addItem(menu, 9, Material.APPLE, "§eDrops Configuration", "§7Adjust item drop rates.", "", "§6§l➢ §eClick to change");
         addItem(menu, 10, Material.PAPER, "§eGame Rules", "§7Modify game rules like §aiPvP §7and §aFriendlyFire.", "", "§6§l➢ §eClick to proceed");
-        addItem(menu, 11, Material.BREWING_STAND_ITEM, "§ePotions Configuration", "§7Manage potion availability and strength.", "", "§6§l➢ §eClick to proceed");
+        addItem(menu, 11, Material.BREWING_STAND_ITEM, "§ePotions Configuration", "§7Manage the §acreation §7of certain potions and their §bupgrades.", "", 
+                "§e➧ §7Potions activated:",
+                "§e➧ §7Speed potion: " + (speedPotionEnabled ? "§aEnabled" : "§cDisabled"),
+                "§e➧ §7Healing potion: " + (healingPotionEnabled ? "§aEnabled" : "§cDisabled"),
+                "§e➧ §7Strength potion: " + (strengthPotionEnabled ? "§aEnabled" : "§cDisabled"),
+                "§e➧ §7Poison potion: " + (poisonPotionEnabled ? "§aEnabled" : "§cDisabled"),
+                "",
+                "§e➧ §7Potion allongée: " + (extendedPotionsEnabled ? "§aEnabled" : "§cDisabled"),
+                "§e➧ §7Level II potion: " + (levelTwoPotionsEnabled ? "§aEnabled" : "§cDisabled"),
+                "",
+                "§6§l➧ §r§eClick to access");
         addItem(menu, 12, Material.CHEST, "§eStarting Items", "§7Modify players' starting inventory.", "", "§6§l➢ §eClick to change");
         addItem(menu, 27, Material.BOOK, "§eScenarios", "§7View available game scenarios.", "", "§6§l➢ §eClick to proceed");
         addItem(menu, 28, Material.BOOK_AND_QUILL, "§eGame name");
@@ -108,6 +123,119 @@ public class gameconfig implements Listener {
 
         player.openInventory(menu);
     }
+    private boolean strengthPotionEnabled = false;
+    private boolean poisonPotionEnabled = false;
+    private boolean healingPotionEnabled = false;
+    private boolean speedPotionEnabled = false;
+    private boolean levelTwoPotionsEnabled = false;
+    private boolean extendedPotionsEnabled = false;
+    private boolean allPotionsEnabled = false;
+
+    public void openPotionMenu(Player player) {
+        Inventory potionMenu = Bukkit.createInventory(null, 18, ChatColor.DARK_PURPLE + "Potion Configuration");
+
+        addToggleItem(potionMenu, 0, Material.POTION, "§eStrength Potion", strengthPotionEnabled);
+        addToggleItem(potionMenu, 1, Material.POTION, "§ePoison Potion", poisonPotionEnabled);
+        addToggleItem(potionMenu, 2, Material.POTION, "§eHealing Potion", healingPotionEnabled);
+        addToggleItem(potionMenu, 3, Material.POTION, "§eSpeed Potion", speedPotionEnabled);
+
+        addToggleItem(potionMenu, 6, Material.GLOWSTONE_DUST, "§eLevel II Potions", levelTwoPotionsEnabled);
+        addToggleItem(potionMenu, 7, Material.REDSTONE, "§eExtended Potions", extendedPotionsEnabled);
+        addToggleItem(potionMenu, 8, Material.POTION, "§bAll Potions", allPotionsEnabled);
+
+        addItem(potionMenu, 14, Material.ARROW, "§cReturn", "§7Go back to the previous menu.");
+
+        player.openInventory(potionMenu);
+    }
+
+    private void addToggleItem(Inventory inv, int slot, Material material, String name, boolean enabled) {
+        String status = enabled ? "§aEnabled" : "§cDisabled";
+        addItem(inv, slot, material, name, "", "§e➢ §7Status: " + status, "", "§6§l➢ §eClick to toggle");
+    }
+
+
+    @EventHandler
+    public void onInventoryClick3(InventoryClickEvent event) {
+        Player player = (Player) event.getWhoClicked();
+        Inventory inv = event.getInventory();
+
+        if (inv.getTitle().equals(ChatColor.DARK_PURPLE + "Potion Configuration")) {
+            event.setCancelled(true);
+            ItemStack clickedItem = event.getCurrentItem();
+            if (clickedItem == null || !clickedItem.hasItemMeta()) return;
+            String itemName = clickedItem.getItemMeta().getDisplayName();
+
+            switch (itemName) {
+                case "§eStrength Potion":
+                    strengthPotionEnabled = !strengthPotionEnabled;
+                    break;
+                case "§ePoison Potion":
+                    poisonPotionEnabled = !poisonPotionEnabled;
+                    break;
+                case "§eHealing Potion":
+                    healingPotionEnabled = !healingPotionEnabled;
+                    break;
+                case "§eSpeed Potion":
+                    speedPotionEnabled = !speedPotionEnabled;
+                    break;
+                case "§eLevel II Potions":
+                    levelTwoPotionsEnabled = !levelTwoPotionsEnabled;
+                    break;
+                case "§eExtended Potions":
+                    extendedPotionsEnabled = !extendedPotionsEnabled;
+                    break;
+                case "§bAll Potions":
+                    allPotionsEnabled = !allPotionsEnabled;
+                    strengthPotionEnabled = allPotionsEnabled;
+                    poisonPotionEnabled = allPotionsEnabled;
+                    healingPotionEnabled = allPotionsEnabled;
+                    speedPotionEnabled = allPotionsEnabled;
+                    levelTwoPotionsEnabled = allPotionsEnabled;
+                    extendedPotionsEnabled = allPotionsEnabled;
+                    break;
+                case "§cReturn":
+                    openMenu(player);
+                    break;
+            }
+            openPotionMenu(player);
+        }
+    }
+
+    @EventHandler
+    public void onPotionBrew(BrewEvent event) {
+        BrewerInventory inv = event.getContents();
+        for (ItemStack item : inv.getContents()) {
+            if (item != null && item.getType() == Material.POTION) {
+                Potion potion = Potion.fromItemStack(item);
+                if (potion != null) {
+                    switch (potion.getType()) {
+                        case STRENGTH:
+                            if (!strengthPotionEnabled) event.setCancelled(true);
+                            break;
+                        case POISON:
+                            if (!poisonPotionEnabled) event.setCancelled(true);
+                            break;
+                        case INSTANT_HEAL:
+                            if (!healingPotionEnabled) event.setCancelled(true);
+                            break;
+                        case SPEED:
+                            if (!speedPotionEnabled) event.setCancelled(true);
+                            break;
+					default:
+						event.setCancelled(true);
+						break;
+                    }
+                    if (!levelTwoPotionsEnabled && potion.getLevel() > 1) {
+                        event.setCancelled(true);
+                    }
+                    if (!extendedPotionsEnabled && potion.hasExtendedDuration()) {
+                        event.setCancelled(true);
+                    }
+                }
+            }
+        }
+    }
+
     public void openDrop(Player player) {
         Inventory menu = Bukkit.createInventory(null, 18, MENU_TITLE);
         
@@ -587,6 +715,8 @@ public class gameconfig implements Listener {
             	openBorderInitial(player);
             } else if (event.getSlot() == 9) {
             	openDrop(player);
+            } else if (event.getSlot() == 11) {
+            	openPotionMenu(player);
             }
         }
     }
@@ -711,7 +841,7 @@ public class gameconfig implements Listener {
     	                disableNetherAccess();
     	                teleportPlayersInNether();
     	            	setBorderVerif(true);
-    	            	startShrinkingBorder();
+    	            	startBorderShrink();
     	            	
     	                cancel();
     	            }
@@ -770,21 +900,18 @@ public class gameconfig implements Listener {
     	        borderShrinking = true; // Lock the border speed after it is set
     	    }
     	}
-     private void startShrinkingBorder() {
-    	    World world = Bukkit.getWorld("world"); // Use your actual world if it's different
-    	    WorldBorder worldBorder = world.getWorldBorder();
-    	    
-    	    // Set the final size of the border and calculate the duration based on the speed
-    	    double finalBorderSize = 100.0; // Set the final border size (adjust as needed)
-    	    double distanceToShrink = worldBorder.getSize() - finalBorderSize;
-    	    long duration = (long) (distanceToShrink / borderSpeed * 20L); // Convert seconds to ticks
-
-    	    // Shrink the border to the final size over the calculated duration
-    	    worldBorder.setSize(finalBorderSize, duration);
-
-    	    // Optionally, broadcast a message to players
-    	    Bukkit.broadcastMessage("§aThe world border is shrinking to its final size!");
-    	}
+    	   public void startBorderShrink() {
+    	        World world = Bukkit.getWorld("world");
+    	        if (world == null) return;
+    	        WorldBorder worldBorder = world.getWorldBorder();
+    	        
+    	        double currentSize = worldBorder.getSize();
+    	        double distanceToShrink = currentSize - finalBorderSize;
+    	        double duration = distanceToShrink / borderSpeed; // Duration is now based on blocks per second
+    	        
+    	        worldBorder.setSize(finalBorderSize, (long) duration);
+    	        Bukkit.broadcastMessage("§aThe world border is shrinking to its final size at " + borderSpeed + " blocks per second!");
+    	    }
      @EventHandler
      public void onGameStart(GameStartEvent e) {
          Player player = e.getp();
@@ -892,7 +1019,7 @@ public class gameconfig implements Listener {
     		teamSize = newSize;
     		
     }
-
+    private static int switchTime = 20;
     public static String getGameName() {
         return gameName;
     }
@@ -904,6 +1031,12 @@ public class gameconfig implements Listener {
     }
     public static void setSlot(int newSlot) {
     	Slot = newSlot;
+    }
+    public static int getSwitchTime() {
+    	return switchTime;
+    }
+    public static void setSwitchTime(int newSwitchTime) {
+    	switchTime = newSwitchTime;
     }
 
 @EventHandler
