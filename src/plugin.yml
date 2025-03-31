@@ -3,7 +3,7 @@ version: "1.0"
 author: KubixDesiney
 main: test.main
 api-version: "1.13"
-depend: [ProtocolLib]
+depend: [ProtocolLib, TitleAPI]
 commands:
    healall:
       description: Heal everybody

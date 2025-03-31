@@ -54,7 +54,6 @@ public class UHCTeamManager {
         }
 
         Team team = scoreboard.registerNewTeam(teamName); // Create scoreboard team
-        team.setPrefix(teamColor + "");  // Set team color (ensure the team color string is applied correctly)
 
         team.setAllowFriendlyFire(false);
         team.setCanSeeFriendlyInvisibles(true);
@@ -115,13 +114,31 @@ public class UHCTeamManager {
             // Add the player to the team on the scoreboard
             team.addEntry(playerName);  // This adds the player to the team
 
-            // Add the player to the playerTeams map
-            if (player != null) {
-                playerTeams.put(player.getUniqueId(), teamName);
-                Bukkit.getServer().broadcastMessage(ChatColor.GREEN + playerName + " joined team " + teamName);
+            playerTeams.put(player.getUniqueId(), teamName);
+            Bukkit.getServer().broadcastMessage(ChatColor.GREEN + playerName + " joined team " + teamName);
+
+            // Fixed string comparison: Use .equalsIgnoreCase
+            if (teamName.equalsIgnoreCase("Red")) {
+                String command = "tab player " + player.getName() + " tabprefix &cRed ✦ ";
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                String command2 = "namecolor red " + player.getName();
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command2);
+            } else if (teamName.equalsIgnoreCase("Blue")) {
+                String command = "tab player " + player.getName() + " tabprefix &9Blue ✦ ";
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                String command2 = "namecolor blue " + player.getName();
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command2);
+            } else if (teamName.equalsIgnoreCase("Green")) {
+                String command = "tab player " + player.getName() + " tabprefix &aGreen ✦ ";
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                String command2 = "namecolor green " + player.getName();
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command2);
+            } else if (teamName.equalsIgnoreCase("Yellow")) {
+                String command = "tab player " + player.getName() + " tabprefix &eYellow ✦ ";
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                String command2 = "namecolor yellow " + player.getName();
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command2);
             }
-        } else {
-            Bukkit.getServer().broadcastMessage(ChatColor.RED + "Team " + teamName + " is at its max size.");
         }
     }
     public TeamData getTeamData(String teamName) {

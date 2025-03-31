@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -20,10 +21,12 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.Scoreboard;
 
 import gamemodes.gamemode;
 import teams.UHCTeamManager;
+import test.main;
 import Rules.spec;
 import utilities.HotBarMessager;
 
@@ -160,14 +163,21 @@ public class events implements Listener {
 		Player player =  event.getEntity();
 		boolean specvalue = spec.getspect();
 		if(specvalue == false) {
-			try {
-				TimeUnit.MINUTES.sleep(1);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			player.kickPlayer("§eThanks for playing !");
-		}
+		    new BukkitRunnable() {
+	            @Override
+	            public void run() {
+	                if (player.isOnline()) {
+	                    player.kickPlayer("§eThanks for playing!");
+	                }
+	            }
+	        }.runTaskLater(main.getInstance(), 600L); // 600 ticks = 30 seconds
+	    } else {
+	    	player.setGameMode(GameMode.SPECTATOR);
+	    }
+		
+			
+		} 
+		
 	}
 	
-}
+

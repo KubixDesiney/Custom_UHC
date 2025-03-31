@@ -10,19 +10,29 @@ import java.util.concurrent.TimeUnit;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
+import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
+
+import com.connorlinfoot.titleapi.TitleAPI;
+
 import events.GameStartEvent;
 import events.gameEndEvent;
 import teams.UHCTeamManager;
+import test.main;
 import decoration.ScoreboardHandler;
 
 
@@ -119,26 +129,63 @@ import decoration.ScoreboardHandler;
 
 	    
 	
-	@EventHandler
-	public void onGameEnd(gameEndEvent e) {
-		Bukkit.broadcastMessage("§e§l――――――――――――――――――――――――");
-		Bukkit.broadcastMessage(" ");
-		Bukkit.broadcastMessage("      §e§lGAME ENDED ");
-		Bukkit.broadcastMessage(" ");
-		Bukkit.broadcastMessage(" §7§l• §eWinner: "+e.getWinner().getName());
-		Bukkit.broadcastMessage(" §7§l• §r§eTop killer: "+e.gettopkiller().getName()+" §ewith §c§l"+e.gettopnumber()+" §eto his name !");
-		Bukkit.broadcastMessage(" ");
-		Bukkit.broadcastMessage("§e§l――――――――――――――――――――――――");
-		Bukkit.broadcastMessage("§7You will be kicked out of the server in 30 seconds...");
-		try {
-			TimeUnit.SECONDS.sleep(30);
-		} catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		Player p = e.getp();
-		p.kickPlayer("§eThanks for playing !");
-	}
+
+	    @EventHandler
+	    public void onGameEnd(gameEndEvent e) {
+	        DamageTracker damageTracker = main.getInstance().getDamageTracker();
+	        Player topDamager = damageTracker.getTopDamager();
+	        double topDamage = (topDamager != null) ? damageTracker.getPlayerDamage(topDamager) : 0.0;
+	        Player winner = e.getWinner();
+	        Player topKiller = e.gettopkiller();
+
+	        // Play EXP gain sound to all players
+	        for (Player player : Bukkit.getOnlinePlayers()) {
+	            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1.0f, 1.0f);
+	            TitleAPI.sendTitle(player,3,3,3,"§e§lGAME ENDED","§aThanks for playing !");
+	        }
+
+	        // Broadcast game results
+	        Bukkit.broadcastMessage("§e§l――――――――――――――――――――――――");
+	        Bukkit.broadcastMessage(" ");
+	        Bukkit.broadcastMessage("      §e§lGAME ENDED ");
+	        Bukkit.broadcastMessage(" ");
+	        Bukkit.broadcastMessage(" §7§l• §eWinner: " + winner.getName());
+	        Bukkit.broadcastMessage(" §7§l• §eTop Killer: " + topKiller.getName() + " §ewith §c§l" + e.gettopkiller() + " §ekills!");
+	        Bukkit.broadcastMessage(" §7§l• §eTop Damager: " + (topDamager != null ? topDamager.getName() : "None") 
+	                + " §ewith §c§l" + topDamage + " §edamage dealt!");
+	        Bukkit.broadcastMessage(" ");
+	        Bukkit.broadcastMessage("§e§l――――――――――――――――――――――――");
+	        Bukkit.broadcastMessage("§7You will be kicked out of the server in 30 seconds...");
+
+	        // Launch fireworks at winner's location
+	        launchFireworks(winner.getLocation(), 3);
+
+	        // Delay before kicking players
+	        new BukkitRunnable() {
+	            @Override
+	            public void run() {
+	                for (Player player : Bukkit.getOnlinePlayers()) {
+	                    player.kickPlayer("§eThanks for playing!");
+	                }
+	            }
+	        }.runTaskLater(main.getInstance(), 600L); // 600L = 30 seconds (20 ticks = 1 sec)
+	    }
+
+	    private void launchFireworks(Location loc, int amount) {
+	        World world = loc.getWorld();
+	        for (int i = 0; i < amount; i++) {
+	            Firework firework = (Firework) world.spawnEntity(loc, EntityType.FIREWORK);
+	            FireworkMeta meta = firework.getFireworkMeta();
+	            meta.addEffect(FireworkEffect.builder()
+	                    .withColor(org.bukkit.Color.ORANGE)
+	                    .withFade(org.bukkit.Color.YELLOW)
+	                    .with(FireworkEffect.Type.BALL_LARGE)
+	                    .withFlicker()
+	                    .build());
+	            meta.setPower(2);
+	            firework.setFireworkMeta(meta);
+	        }
+	    }
 
 	}
 

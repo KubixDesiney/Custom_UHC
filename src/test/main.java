@@ -13,6 +13,7 @@ import Rules.gameconfig;
 import commands.CommandCenter;
 import decoration.ScoreboardHandler;
 import events.events;
+import listener.DamageTracker;
 import listener.GameStartListener;
 import listener.GlobalVariableListener;
 import listener.TeamChatListener;
@@ -22,6 +23,7 @@ import teams.UHCTeamManager;
 public class main extends JavaPlugin{
     private ConfigManager configManager;
 	private UHCTeamManager teamManager;
+	private DamageTracker damageTracker;
 	private static main instance;
 	
 	
@@ -31,6 +33,8 @@ public class main extends JavaPlugin{
 		
 		instance = this;
 		saveDefaultConfig();
+		
+		damageTracker = new DamageTracker();
 		UHCTeamManager teamManager = new UHCTeamManager(this);
 		ConfigManager configManager = new ConfigManager(this);
 		ScoreboardHandler scoreBoard = new ScoreboardHandler(this,teamManager);
@@ -52,6 +56,7 @@ public class main extends JavaPlugin{
 		getCommand("finish").setExecutor(commandCenter);
 		getCommand("enchant").setExecutor(commandCenter);
 		getCommand("team").setExecutor(commandCenter);
+		getServer().getPluginManager().registerEvents(damageTracker, this);
 	    getServer().getPluginManager().registerEvents(new GlobalVariableListener(teamManager, configManager), this);
 	    getServer().getPluginManager().registerEvents(new TeamChatListener(new UHCTeamManager(this)), this);
 		getServer().getPluginManager().registerEvents(new gameconfig(this), this);
@@ -96,6 +101,9 @@ public class main extends JavaPlugin{
     }
     public UHCTeamManager getTeamManager() {
         return teamManager;
+    }
+    public DamageTracker getDamageTracker() {
+        return damageTracker;
     }
 
 		

@@ -9,4 +9,5 @@ module Custom_UHC {
 	requires java.logging;
 	requires ProtocolLib;
 	requires com.google.common;
+	requires transitive TitleAPI;
 }
