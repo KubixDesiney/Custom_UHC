@@ -43,7 +43,6 @@ import decoration.ScoreboardHandler;
 		    if (world != null) {
 		        // Set game rules for UHC
 		        world.setDifficulty(Difficulty.HARD); // Set difficulty to Hard
-		        world.setPVP(true); // Enable PvP
 		        
 		        // Disable natural health regeneration using a command
 		        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule naturalRegeneration false");

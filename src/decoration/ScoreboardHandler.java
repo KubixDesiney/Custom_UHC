@@ -147,12 +147,6 @@ public class ScoreboardHandler implements Listener {
         // Calculate the distance to the center
         double distance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
 
-        // Debugging output to check the angle and distance
-        System.out.println("Player Position (X: " + playerX + ", Z: " + playerZ + ")");
-        System.out.println("Delta (X: " + deltaX + ", Z: " + deltaZ + ")");
-        System.out.println("Calculated Angle: " + angle);
-        System.out.println("Calculated Distance: " + distance);
-
         // Get the arrow direction based on the calculated angle
         String arrow = getArrowDirection(relativeAngle);
 

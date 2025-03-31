@@ -8,6 +8,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.entity.EntityType;
@@ -653,10 +654,60 @@ public class gameconfig implements Listener {
     	    new BukkitRunnable() {
     	        @Override
     	        public void run() {
+     	            Sound sound = Sound.valueOf("BLOCK_STONE_BUTTON_CLICK_OFF");
+    	            Sound sound2 = Sound.valueOf("ENTITY_ELDER_GUARDIAN_CURSE");
     	            if (meetupTime > 0) {
+    	            	if (meetupTime == 10 ) {
+    	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+    	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+    	                    }
+    	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eMap will start shrinking in §b10 §eseconds.");
+    	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eHez za3ktk w emchi ll centre ");
+    	            	}
+    	            	if (meetupTime == 5 ) {
+    	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+    	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+    	                    }
+    	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eMap will start shrinking in §b5 §eseconds.");
+    	            	}
+    	            	if (meetupTime == 4 ) {
+    	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+    	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+    	                    }
+    	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eMap will start shrinking in §b4 §eseconds.");
+    	            	}
+    	            	if (meetupTime == 3 ) {
+    	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+    	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+    	                    }
+    	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eMap will start shrinking in §b3 §eseconds.");
+    	            	}
+    	            	if (meetupTime == 2 ) {
+    	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+    	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+    	                    }
+    	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eMap will start shrinking in §b2 §eseconds.");
+    	            	}
+    	            	if (meetupTime == 1 ) {
+    	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+    	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+    	                    }
+    	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eMap will start shrinking in §b1 §eseconds.");
+
+    	            	}
     	                meetupTime--;
     	                // The scoreboard will be updated every second in the startUpdatingScoreboard method
-    	            } else {
+    	            } else if (meetupTime == 0) {
+	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound2, 1.0F, 1.0F); // Play sound
+	                    }
+	                    Bukkit.broadcastMessage(" ");
+	                    Bukkit.broadcastMessage(" ");
+	                    Bukkit.broadcastMessage("§7§l➤ §e§lPhase: §3§lMeetUp time ");
+	                    Bukkit.broadcastMessage(" ");
+	                    Bukkit.broadcastMessage("§7§l➤ §e§lInfo: §r§7Map size will start shrinking. (hez s7abek w emchi l centre fighty)");
+	                    Bukkit.broadcastMessage(" ");
+	                    Bukkit.broadcastMessage(" ");
     	                disableNetherAccess();
     	                teleportPlayersInNether();
     	            	setBorderVerif(true);
@@ -736,26 +787,84 @@ public class gameconfig implements Listener {
     	}
      @EventHandler
      public void onGameStart(GameStartEvent e) {
-    	    Player player = e.getp();
-    	    
-    	    gameStartTime = System.currentTimeMillis();
-    	    startGameTimer();
-    	    // Create an instance of ScoreboardHandler to start the scoreboard updates
-    	    ScoreboardHandler scoreboardHandler = new ScoreboardHandler(plugin, manager); // Pass your plugin reference here
-    	    scoreboardHandler.startGlobalScoreboardUpdater();
-    	    
-    	    new BukkitRunnable() {
-    	        @Override
-    	        public void run() {
-    	            if (pvpTime > 0) {
-    	                pvpTime--;
-    	                // The scoreboard will be updated every second in the startUpdatingScoreboard method
-    	            } else {
-    	                cancel();
-    	            }
-    	        }
-    	    }.runTaskTimer(Bukkit.getPluginManager().getPlugin("Custom_UHC"), 0L, 20L);
-    	}
+         Player player = e.getp();
+         
+         gameStartTime = System.currentTimeMillis();
+         startGameTimer();
+
+         // Create an instance of ScoreboardHandler to start the scoreboard updates
+         ScoreboardHandler scoreboardHandler = new ScoreboardHandler(plugin, manager);
+         scoreboardHandler.startGlobalScoreboardUpdater();
+         
+         new BukkitRunnable() {
+             @Override
+             public void run() {
+ 	            Sound sound = Sound.valueOf("BLOCK_STONE_BUTTON_CLICK_OFF");
+	            Sound sound2 = Sound.valueOf("ENTITY_ENDERDRAGON_GROWL");
+	            if (pvpTime > 0) {
+	                if (pvpTime == 10) {
+	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+	                    }
+	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §cPvP will be enabled in §e10 §cseconds.");
+	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §e10 §cseconds wtnjmou tetneykou (blou8a o5ra)");
+	                }
+
+	                if (pvpTime == 5) {
+	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+	                    }
+	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §cPvP will be enabled in §e5 §cseconds.");
+	                }
+	                
+	                if (pvpTime == 4) {
+	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+	                    }
+	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §cPvP will be enabled in §e4 §cseconds.");
+	                }
+
+	                if (pvpTime == 3) {
+	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+	                    }
+	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §cPvP will be enabled in §e3 §cseconds.");
+	                }
+
+	                if (pvpTime == 2) {
+	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+	                    }
+	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §cPvP will be enabled in §e2 §cseconds.");
+	                }
+
+	                if (pvpTime == 1) {
+	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F); // Play sound
+	                    }
+	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §cPvP will be enabled in §e1 §csecond.");
+	                }
+
+	                pvpTime--; // Decrease pvpTime after the checks
+	            } else if (pvpTime == 0) {
+	                for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	                    onlinePlayer.playSound(onlinePlayer.getLocation(), sound2, 1.0F, 1.0F); // PvP activated sound
+	                }
+
+	                Bukkit.broadcastMessage("§7§o⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
+	                Bukkit.broadcastMessage(" ");
+	                Bukkit.broadcastMessage("§7§l➤ §e§lPhase: §c§lPvP Activated");
+	                Bukkit.broadcastMessage(" ");
+	                Bukkit.broadcastMessage("§7§l➤§e§lInfo: §r§7Players can kill each other now. (ely tal9ah 9odemk nikou) ");
+	                Bukkit.broadcastMessage(" ");
+	                Bukkit.broadcastMessage(" ");
+	                Bukkit.broadcastMessage("§7§o⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⯯⯯⯯");
+	                world.setPVP(true); // Enable PvP
+	                cancel();
+	            }
+	        }
+	    }.runTaskTimer(Bukkit.getPluginManager().getPlugin("Custom_UHC"), 0L, 20L);
+	}
      public void startGameTimer() {
     	    new BukkitRunnable() {
     	        @Override

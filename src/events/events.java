@@ -100,7 +100,9 @@ public class events implements Listener {
 
 	            // Play the wither spawn sound at the death location
 	            Sound sound = Sound.valueOf("ENTITY_WITHER_SPAWN");
-	            deathLocation.getWorld().playSound(deathLocation, sound, 1.0F, 1.0F);
+	            for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	                onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F);
+	            }
 
 	            // Strike lightning at the death location
 	            LightningStrike lightning = deathLocation.getWorld().strikeLightning(deathLocation);
