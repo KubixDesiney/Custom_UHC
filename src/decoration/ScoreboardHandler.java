@@ -122,21 +122,27 @@ public class ScoreboardHandler implements Listener {
     }
 
     private void updateGameInProgress(Player player, SimpleScoreboard simpleScoreboard, String formattedPvPTime, String formattedMeetupTime, int borderSize) {
-        // Get player position
+
         double playerX = player.getLocation().getX();
         double playerZ = player.getLocation().getZ();
 
-        // Calculate the difference in position to the center (0, 0)
-        double deltaX = 0 - playerX; // Difference in X position
-        double deltaZ = 0 - playerZ; // Difference in Z position
+        double deltaX = 0 - playerX; 
+        double deltaZ = 0 - playerZ; 
 
-        // Calculate the angle in radians and convert it to degrees
-        double angle = Math.toDegrees(Math.atan2(deltaZ, deltaX)); // atan2 gives the angle from -PI to PI
-
-        // Normalize the angle to fit within 0-360 degrees
+        double angle = Math.toDegrees(Math.atan2(-deltaX, deltaZ)); 
+        float playerYaw = player.getLocation().getYaw();
         if (angle < 0) {
             angle += 360;
         }
+        if (playerYaw < 0) {
+            playerYaw += 360; 
+        }
+
+        double relativeAngle = angle - playerYaw;
+        if (relativeAngle < 0) {
+            relativeAngle += 360; 
+        }
+
 
         // Calculate the distance to the center
         double distance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
@@ -148,11 +154,11 @@ public class ScoreboardHandler implements Listener {
         System.out.println("Calculated Distance: " + distance);
 
         // Get the arrow direction based on the calculated angle
-        String arrow = getArrowDirection(angle);
+        String arrow = getArrowDirection(relativeAngle);
 
         // Format the distance
         String distanceText = String.format("§b%.1f", distance); // Format distance to one decimal place
-        String arrowText = arrow + " " + distanceText; // Combine arrow and distance
+        String arrowText = arrow + " §r§b" + distanceText; // Combine arrow and distance
 
         // Ensure the arrow text fits within the 16 character limit
         if (arrowText.length() > 16) {
@@ -169,7 +175,7 @@ public class ScoreboardHandler implements Listener {
         simpleScoreboard.add("§b" + borderSize + " §7/ -§b" + borderSize, 9);
         simpleScoreboard.add("§7--info--", 8);
         simpleScoreboard.add("§eTeam:"+teamManager.getPlayerTeam(player), 7);
-        simpleScoreboard.add("§eCenter " + arrowText, 6); // Display the arrow and distance text
+        simpleScoreboard.add("§eCenter: §b§l" + arrowText, 6); // Display the arrow and distance text
         simpleScoreboard.add("§eMode: §b" + gameconfig.getTeamSize() + "§bvs" + gameconfig.getTeamSize(), 5);
         simpleScoreboard.add("§7----------------", 4);
         simpleScoreboard.add("§6mc.chancemaker.net", 3);
@@ -177,23 +183,23 @@ public class ScoreboardHandler implements Listener {
     }
 
     // Determine the arrow direction based on the angle
- private String getArrowDirection(double angle) {
+    private String getArrowDirection(double angle) {
         if (angle >= 337.5 || angle < 22.5) {
-            return "↑"; // North
+            return "↑"; // Forward
         } else if (angle >= 22.5 && angle < 67.5) {
-            return "↗"; // North-East
+            return "↗"; // Forward-Right
         } else if (angle >= 67.5 && angle < 112.5) {
-            return "→"; // East
+            return "→"; // Right
         } else if (angle >= 112.5 && angle < 157.5) {
-            return "↘"; // South-East
+            return "↘"; // Back-Right
         } else if (angle >= 157.5 && angle < 202.5) {
-            return "↓"; // South
+            return "↓"; // Backward
         } else if (angle >= 202.5 && angle < 247.5) {
-            return "↙"; // South-West
+            return "↙"; // Back-Left
         } else if (angle >= 247.5 && angle < 292.5) {
-            return "←"; // West
+            return "←"; // Left
         } else {
-            return "↖"; // North-West
+            return "↖"; // Forward-Left
         }
- }
+    }
 }
