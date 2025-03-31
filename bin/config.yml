@@ -1,0 +1,21 @@
+teams:
+  names:
+    - "Red"
+    - "Green"
+    - "Blue"
+    - "Yellow"
+    - "Dark_Red"
+  colors:
+    - "RED"
+    - "GREEN"
+    - "BLUE"
+    - "YELLOW"
+    - "DARK_RED"
+drop_rates:
+    APPLE: 0
+    GOLDEN_APPLE: 0
+    FLINT: 0
+    FEATHER: 0
+    ARROW: 0
+    XP_BOTTLE: 0
+    ENDER_PEARL: 0

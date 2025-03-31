@@ -1,0 +1,32 @@
+name: Custom_UHC
+version: "1.0"
+author: KubixDesiney
+main: test.main
+api-version: "1.13"
+depend: [ProtocolLib]
+commands:
+   healall:
+      description: Heal everybody
+      usage: /<commands>
+      aliases: [heal]
+   changeslot:
+      description: modify server slot
+      usage: /<commands>
+   addslot:
+      description: add server slot
+      usage: /<commands>
+   Mode:
+    description: change gamemode
+    usage: /<commands>
+   start:
+     description: start
+     usage: /<commands>
+   finish:
+       description: Saves your starting inventory and switches to survival.
+       usage: /finish
+   enchant:
+       description: Opens the enchantment menu.
+       usage: /enchant
+   team:
+       description: team gestion
+       usage: /team
