@@ -5,12 +5,64 @@ teams:
     - "Blue"
     - "Yellow"
     - "Black"
+    - "Dark_Red"
+    - "Aqua"
+    - "Pink"
+    - "Orange"
+    - Dark_Blue
+    - Dark_Green
+    - Purple
+    - Gray
+    - Dark_Gray
+    - HeartRed
+    - HeartBlue
+    - HeartGreen
+    - HeartYellow
+    - HeartBlack
+    - HeartDark_Red
+    - HeartAqua
+    - HeartPink
+    - HeartOrange
+    - HeartDark_Blue
+    - HeartDark_Green
+    - Heart_Purple
+    - Heart_Gray
+    - HeartDark_Gray
+    - SpecialRed
+    - SpecialBlue
+    - SpecialGreen
   colors:
     - "RED"
     - "GREEN"
     - "BLUE"
     - "YELLOW"
     - "BLACK"
+    - "DARK_RED"
+    - "AQUA"
+    - "PINK"
+    - ORANGE
+    - DARK_BLUE
+    - DARK_GREEN
+    - PURPLE
+    - GRAY
+    - DARK_GRAY
+    - HEARTRED
+    - HEARTBLUE
+    - HEARTGREEN
+    - HEARTYELLOW
+    - HEARTBLACK
+    - HEARTDARK_RED
+    - HEARTAQUA
+    - HEARTPINK
+    - HEARTORANGE
+    - HEARTDARK_BLUE
+    - HEARTDARK_GREEN
+    - HEART_PURPLE
+    - HEART_GRAY
+    - HEARTDARK_GRAY
+    - SPECIALRED
+    - SPECIALBLUE
+    - SPECIALGREEN
 drop_rates:
     APPLE: 0
     GOLDEN_APPLE: 0

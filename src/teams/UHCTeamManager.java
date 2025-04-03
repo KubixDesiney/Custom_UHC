@@ -14,11 +14,7 @@ public class UHCTeamManager {
     private final Map<String, TeamData> teams = new HashMap<>();
     private final static Map<UUID, String> playerTeams = new HashMap<>();
     private static Scoreboard scoreboard = null;
-    private int teamSize = 2; // Default team size
-    private int serverSlot = 20; // Default server slot
-    private final JavaPlugin plugin;
-
-   public static List<Player> getPlayersInTeam(String teamName) {
+    public static List<Player> getPlayersInTeam(String teamName) {
        List<Player> players = new ArrayList<>();
        for (Map.Entry<UUID, String> entry : playerTeams.entrySet()) {
            if (entry.getValue().equals(teamName)) {
@@ -32,8 +28,7 @@ public class UHCTeamManager {
    }
 
     public UHCTeamManager(JavaPlugin plugin) {
-    	this.plugin = plugin;
-        ScoreboardManager manager = Bukkit.getScoreboardManager();
+    	ScoreboardManager manager = Bukkit.getScoreboardManager();
         if (manager != null) {
             scoreboard = manager.getMainScoreboard();
         } else {

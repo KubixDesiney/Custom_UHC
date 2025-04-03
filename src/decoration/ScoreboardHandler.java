@@ -17,6 +17,7 @@ import org.bukkit.scoreboard.Scoreboard;
 
 import Rules.gameconfig;
 import gamemodes.Gamestatus;
+import gamemodes.gamemode;
 import teams.UHCTeamManager;
 import utilities.SimpleScoreboard;
 
@@ -105,6 +106,9 @@ public class ScoreboardHandler implements Listener {
 
         int pvpTime = gameconfig.getPvPTime();
         String formattedPvPTime = gameconfig.formatTime(pvpTime);
+        
+        int switchTime = gameconfig.getSwitchTime();
+        String formattedSwitchTime = gameconfig.formatTime(switchTime);
 
         int meetupTime = gameconfig.getMeetupTime();
         String formattedMeetupTime = gameconfig.formatTime(meetupTime);
@@ -116,13 +120,13 @@ public class ScoreboardHandler implements Listener {
 
         int gameStatus = Gamestatus.getStatus();
         if (gameStatus == 0) {
-            updateWaitingPhase(simpleScoreboard, formattedPvPTime, formattedMeetupTime, borderSize);
+            updateWaitingPhase(simpleScoreboard, formattedPvPTime, formattedMeetupTime, borderSize, formattedSwitchTime);
         } else {
-            updateGameInProgress(player, simpleScoreboard, formattedPvPTime, formattedMeetupTime, borderSize);
+            updateGameInProgress(player, simpleScoreboard, formattedPvPTime, formattedMeetupTime, borderSize, formattedSwitchTime);
         }
     }
 
-    private void updateWaitingPhase(SimpleScoreboard simpleScoreboard, String formattedPvPTime, String formattedMeetupTime, int borderSize) {
+    private void updateWaitingPhase(SimpleScoreboard simpleScoreboard, String formattedPvPTime, String formattedMeetupTime, int borderSize, String formattedSwitchTime) {
         simpleScoreboard.add(" ", 14);
         simpleScoreboard.add("§7Mode: §b" + gameconfig.getTeamSize() + "§bvs" + gameconfig.getTeamSize(), 13);
         simpleScoreboard.add("§7Players : §e" + Bukkit.getOnlinePlayers().size() + "§7/§e" + Bukkit.getMaxPlayers(), 12);
@@ -131,7 +135,7 @@ public class ScoreboardHandler implements Listener {
         simpleScoreboard.add("§7――――――――――――――――――――――――", 8);
     }
 
-    private void updateGameInProgress(Player player, SimpleScoreboard simpleScoreboard, String formattedPvPTime, String formattedMeetupTime, int borderSize) {
+    private void updateGameInProgress(Player player, SimpleScoreboard simpleScoreboard, String formattedPvPTime, String formattedMeetupTime, int borderSize, String formattedSwitchTime) {
 
         double playerX = player.getLocation().getX();
         double playerZ = player.getLocation().getZ();
@@ -173,16 +177,19 @@ public class ScoreboardHandler implements Listener {
         simpleScoreboard.add("§7--Players--", 16);
         simpleScoreboard.add("§eTeams:§7 "+Gamestatus.getAlive()+ " §7(" + Bukkit.getOnlinePlayers().size() + "§7)", 15);
         simpleScoreboard.add("§7--Time--", 14);
-        simpleScoreboard.add("§ePvP : §b" + formattedPvPTime, 12);
-        simpleScoreboard.add("§eMeetup : §b" + formattedMeetupTime, 11);
-        simpleScoreboard.add("§7--Border size--", 10);
-        simpleScoreboard.add("§b" + borderSize + " §7/ -§b" + borderSize, 9);
-        simpleScoreboard.add("§7--info--", 8);
-        simpleScoreboard.add("§eTeam:"+teamManager.getPlayerTeam(player), 7);
-        simpleScoreboard.add("§eCenter: §b§l" + arrowText, 6); // Display the arrow and distance text
-        simpleScoreboard.add("§eMode: §b" + gameconfig.getTeamSize() + "§bvs" + gameconfig.getTeamSize(), 5);
-        simpleScoreboard.add("§7----------------", 4);
-        simpleScoreboard.add("§6mc.chancemaker.net", 3);
+        if (gamemode.getMode() == 2) {
+        	simpleScoreboard.add("§eSwitch : §b"+ formattedSwitchTime, 12);
+        }
+        simpleScoreboard.add("§ePvP : §b" + formattedPvPTime, 11);
+        simpleScoreboard.add("§eMeetup : §b" + formattedMeetupTime, 10);
+        simpleScoreboard.add("§7--Border size--", 9);
+        simpleScoreboard.add("§b" + borderSize + " §7/ -§b" + borderSize, 8);
+        simpleScoreboard.add("§7--info--", 7);
+        simpleScoreboard.add("§eTeam:"+teamManager.getPlayerTeam(player), 6);
+        simpleScoreboard.add("§eCenter: §b§l" + arrowText, 5); // Display the arrow and distance text
+        simpleScoreboard.add("§eMode: §b" + gameconfig.getTeamSize() + "§bvs" + gameconfig.getTeamSize(), 4);
+        simpleScoreboard.add("§7----------------", 3);
+        simpleScoreboard.add("§6mc.chancemaker.net", 2);
 
     }
 

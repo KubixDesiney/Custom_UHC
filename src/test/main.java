@@ -38,7 +38,7 @@ public class main extends JavaPlugin{
 		int gamestatus = Gamestatus.getStatus();
 		if (gamestatus == 1) {
 			int switchInterval = gameconfig.getSwitchTime();// Set the interval in minutes
-			switchUHC = new SwitchUHC(this, teamManager, switchInterval);
+			switchUHC = new SwitchUHC(this, teamManager, 20);
 			distanceTracker = new TeamDistanceTracker(teamManager);
 
 			Bukkit.getScheduler().runTaskTimer(this, () -> {
@@ -53,7 +53,6 @@ public class main extends JavaPlugin{
 	        world.setGameRuleValue("doDaylightCycle", "false");
 		}
 		instance = this;
-		saveDefaultConfig();
 		
 		damageTracker = new DamageTracker();
 		UHCTeamManager teamManager = new UHCTeamManager(this);

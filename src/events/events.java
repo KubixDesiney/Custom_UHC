@@ -153,16 +153,14 @@ public class events implements Listener {
 	            Block block = event.getBlock();
 	            Location blockLocation = block.getLocation();
 
-	            // Check if the block is near any lightning strike location
 	            boolean isNearLightning = false;
 	            for (Location lightningLocation : lightningLocations) {
-	                if (blockLocation.distanceSquared(lightningLocation) <= 25) {  // Use distanceSquared for optimization
+	                if (blockLocation.distanceSquared(lightningLocation) <= 25) {  
 	                    isNearLightning = true;
 	                    break;
 	                }
 	            }
 
-	            // If the block is near a lightning strike, cancel the burn event
 	            if (isNearLightning) {
 	                event.setCancelled(true);
 	            }
@@ -184,7 +182,7 @@ public class events implements Listener {
 	                    player.kickPlayer("§eThanks for playing!");
 	                }
 	            }
-	        }.runTaskLater(main.getInstance(), 600L); // 600 ticks = 30 seconds
+	        }.runTaskLater(main.getInstance(), 600L); 
 	    } else {
 	    	player.setGameMode(GameMode.SPECTATOR);
 	    }

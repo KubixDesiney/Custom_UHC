@@ -36,8 +36,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.Potion;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import com.connorlinfoot.titleapi.TitleAPI;
-
 import decoration.ScoreboardHandler;
 import events.GameStartEvent;
 import events.TeamSizeChangedEvent;
@@ -79,6 +77,8 @@ public class gameconfig implements Listener {
     public static long getGameElapsedTime() {
     	return System.currentTimeMillis() -gameStartTime;
     }
+    private static int staticSwitchTime = 0;
+    private static int switchTime = 0;
     private static int teamSize = 1;
     private static int pvpTime = 0;
     private static int meetupTime=0;
@@ -133,8 +133,8 @@ public class gameconfig implements Listener {
         Inventory scenariosMenu = Bukkit.createInventory(null, 54, ChatColor.GOLD + "Scenarios");
 
         // Wagons
-        addItem1(scenariosMenu, 2, Material.STORAGE_MINECART, "§eScenario 1");
-        addItem1(scenariosMenu, 6, Material.EXPLOSIVE_MINECART, "§eScenario 2", "§7Click to open the Gamemode menu.");
+        addItem1(scenariosMenu, 2, Material.STORAGE_MINECART, "§eComing soon...");
+        addItem1(scenariosMenu, 6, Material.EXPLOSIVE_MINECART, "§eGamemode selection", "§7Click to open the Gamemode menu.");
 
         // Line 3
         addItem1(scenariosMenu, 18, Material.EXP_BOTTLE, "§eExperience Bottles");
@@ -202,6 +202,29 @@ public class gameconfig implements Listener {
 
         player.openInventory(gamemodeMenu);
     }
+    public void openSwitchMenu (Player player ) {
+    	Inventory SwitchMenu = Bukkit.createInventory(null, 9, "SwitchUHC menu");
+    	
+    	addItem(SwitchMenu,0, Material.COMPASS,"§eSwitch Time","§7Control when the §aswitch §7of players start"," ","§e➢ §7Time: "+ formatTime(switchTime) ,"","§6§l➢ §r§eClick to change");
+    	player.openInventory(SwitchMenu);
+    }
+    public void onInventoryClick6 (InventoryClickEvent event) {
+    	if (event.getClickedInventory() == null) return;
+    	
+    	Player player = (Player) event.getWhoClicked();
+    	ItemStack item = event.getCurrentItem();
+    	if (item == null || item.getType() == Material.AIR) return;
+    	
+    	if (event.getView().getTitle().contains("SwitchUHC menu")) {
+    		event.setCancelled(true);
+    	}
+    	if (event.getView().getTitle().contains("SwitchUHC menu")) {
+    		if (item.getType() == Material.COMPASS) {
+    			addSwitchTime(5);
+    			openSwitchMenu(player);
+    		}
+    	}
+    }
     @EventHandler
     public void onInventoryClick5(InventoryClickEvent event) {
         if (event.getClickedInventory() == null) return;
@@ -211,7 +234,7 @@ public class gameconfig implements Listener {
         if (item == null || item.getType() == Material.AIR) return;
 
         // Prevent moving items in menus
-        if (event.getView().getTitle().contains("Game Configuration") || event.getView().getTitle().contains("Scenarios") || event.getView().getTitle().contains("Game Modes")) {
+        if (event.getView().getTitle().contains("Game Configuration") || event.getView().getTitle().contains("Scenarios") || event.getView().getTitle().contains("Game Modes") || event.getView().getTitle().contains("SwitchUHC menu") ) {
             event.setCancelled(true);
         }
 
@@ -232,16 +255,17 @@ public class gameconfig implements Listener {
             if (item.getType() == Material.MONSTER_EGG) {
                 gamemode.setMode(1);
             } else if (item.getType() == Material.BOW) {
+                Bukkit.getScheduler().runTask(plugin, () -> openSwitchMenu(player));
                 gamemode.setMode(2);
             } else if (item.getType() == Material.GOLDEN_APPLE) {
                 gamemode.setMode(0);
             } else if (item.getType() == Material.ARROW) {
                 openScenariosMenu(player);
             }
-        }
+    }
     }
     public void onItemDrop(PlayerDropItemEvent event) {
-        if (event.getPlayer().getOpenInventory().getTitle().contains("Game Configuration") || event.getPlayer().getOpenInventory().getTitle().contains("Scenarios") || event.getPlayer().getOpenInventory().getTitle().contains("Game Modes")) {
+        if (event.getPlayer().getOpenInventory().getTitle().contains("Game Configuration") || event.getPlayer().getOpenInventory().getTitle().contains("Scenarios") || event.getPlayer().getOpenInventory().getTitle().contains("Game Modes") || event.getPlayer().getOpenInventory().getTitle().contains("SwitchUHC menu")) {
             event.setCancelled(true);
         }
     }
@@ -890,6 +914,9 @@ public class gameconfig implements Listener {
             player.getInventory().remove(Material.BOOK_AND_QUILL);
         }, 1L);
     }
+    private void addSwitchTime (int minutes) {
+    	switchTime += minutes * 60;
+    }
     private void addMeetupTime(int minutes) {
     	meetupTime += minutes * 60;
     }
@@ -907,10 +934,23 @@ public class gameconfig implements Listener {
         int seconds = timeInSeconds % 60;
         return String.format("%02d:%02d", minutes, seconds);
     }
+     private void onGameStart3(GameStartEvent e) {
+         new BukkitRunnable() {
+             @Override
+             public void run() {
+                 if (switchTime <= 0) {
+                     ; // Call custom logic when timer hits 00:00
+                     switchTime = staticSwitchTime; // Reset timer
+                 }
+                 
+                 switchTime--;
+             }
+         }.runTaskTimer(plugin, 0L, 20L); // Runs every second
+     }
 
      @EventHandler
      public void onGameStart2(GameStartEvent e) {
-    	    Player player = e.getp();
+    	    e.getp();
     	    
     	    // Set the initial world border size
     	    // Example initial size, adjust as needed
@@ -1003,7 +1043,7 @@ public class gameconfig implements Listener {
      @EventHandler
      public void onPortalUse(PlayerInteractEvent event) {
          Player player = event.getPlayer();
-         ItemStack item = player.getInventory().getItemInHand();
+         player.getInventory().getItemInHand();
          
          // Check if Nether access is disabled
          if (!isNetherAccessEnabled) {
@@ -1058,7 +1098,7 @@ public class gameconfig implements Listener {
     	    }
      @EventHandler
      public void onGameStart(GameStartEvent e) {
-         Player player = e.getp();
+         e.getp();
          
          gameStartTime = System.currentTimeMillis();
          startGameTimer();
@@ -1152,7 +1192,7 @@ public class gameconfig implements Listener {
     	        }
     	    }.runTaskTimer(plugin, 0L, 20L); // Run every 20 ticks (1 second)
     	}
-     
+
 
     public static int getTeamSize() {
         return teamSize;
@@ -1163,7 +1203,6 @@ public class gameconfig implements Listener {
     		teamSize = newSize;
     		
     }
-    private static int switchTime = 20;
     public static String getGameName() {
         return gameName;
     }

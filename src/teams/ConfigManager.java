@@ -18,8 +18,16 @@ public class ConfigManager {
     }
 
     private void loadConfig() {
-        plugin.saveDefaultConfig();  // Ensure config.yml exists
+        // No need to call saveDefaultConfig() here if you want to retain custom values in config.yml
         FileConfiguration config = plugin.getConfig();
+
+        // Ensure that the "teams.names" and "teams.colors" are properly initialized in the config if not already
+        if (!config.contains("teams.names")) {
+            config.set("teams.names", new ArrayList<String>()); // Set a default empty list if not present
+        }
+        if (!config.contains("teams.colors")) {
+            config.set("teams.colors", new ArrayList<String>()); // Set a default empty list if not present
+        }
 
         teamNames = config.getStringList("teams.names");
         teamColors = config.getStringList("teams.colors");
@@ -49,7 +57,6 @@ public class ConfigManager {
         return chosenTeam;
     }
 
-
     public String getTeamColor(String teamName) {
         FileConfiguration config = plugin.getConfig();
         List<String> teamNames = config.getStringList("teams.names");
@@ -68,5 +75,21 @@ public class ConfigManager {
             plugin.getLogger().warning("Team name not found: " + teamName);
         }
         return "WHITE"; // Default if no match is found
+    }
+
+    // Add a method to add teams dynamically if you need to do so programmatically
+    public void addTeam(String teamName, String teamColor) {
+        FileConfiguration config = plugin.getConfig();
+        List<String> currentNames = config.getStringList("teams.names");
+        List<String> currentColors = config.getStringList("teams.colors");
+
+        if (!currentNames.contains(teamName)) {
+            currentNames.add(teamName);
+            currentColors.add(teamColor);
+            config.set("teams.names", currentNames);
+            config.set("teams.colors", currentColors);
+            plugin.saveConfig(); // Save the config after modifying it
+            plugin.getLogger().info("Added new team: " + teamName);
+        }
     }
 }
