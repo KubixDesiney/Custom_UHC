@@ -1,26 +1,57 @@
 package teams;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 import utilities.HotBarMessager;
 
 import java.util.List;
+import java.util.logging.Level;
 
 public class TeamDistanceTracker {
 
     private final UHCTeamManager teamManager;
-    private static final int MAX_HOTBAR_LENGTH = 60; // Typical hotbar character limit
+    private final JavaPlugin plugin;
+    private int taskId = -1;
 
-    public TeamDistanceTracker(UHCTeamManager teamManager) {
+    public TeamDistanceTracker(UHCTeamManager teamManager, JavaPlugin plugin) {
         this.teamManager = teamManager;
+        this.plugin = plugin;
     }
 
-    public void updateHotBar(Player player) {
+    public void startTracking() {
+        // Cancel previous task if running
+        if (taskId != -1) {
+            Bukkit.getScheduler().cancelTask(taskId);
+        }
+        
+        // Schedule new repeating task (20 ticks = 1 second)
+        taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this::updateAllPlayers, 0L, 20L);
+    }
+
+    public void stopTracking() {
+        if (taskId != -1) {
+            Bukkit.getScheduler().cancelTask(taskId);
+            taskId = -1;
+        }
+    }
+
+    private void updateAllPlayers() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            updatePlayerHotbar(player);
+        }
+    }
+
+    private void updatePlayerHotbar(Player player) {
         try {
+            // Debug message to console
+            plugin.getLogger().info("Updating tracker for: " + player.getName());
+            
             String teamName = teamManager.getPlayerTeam(player);
             if (teamName == null || teamName.isEmpty()) {
-                sendSafeMessage(player, ChatColor.RED + "No team!");
+                sendDebugMessage(player, ChatColor.RED + "No team!");
                 return;
             }
 
@@ -28,65 +59,45 @@ public class TeamDistanceTracker {
             teammates.remove(player); // Remove self
 
             if (teammates.isEmpty()) {
-                sendSafeMessage(player, ChatColor.YELLOW + "No teammates");
+                sendDebugMessage(player, ChatColor.YELLOW + "No teammates");
                 return;
             }
 
-            String message = buildTeammateMessage(player, teammates);
-            sendSafeMessage(player, message);
+            // Find closest teammate
+            Player closest = null;
+            double minDistance = Double.MAX_VALUE;
+            
+            for (Player teammate : teammates) {
+                if (!teammate.isOnline()) continue;
+                
+                double distance = player.getLocation().distance(teammate.getLocation());
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closest = teammate;
+                }
+            }
+
+            if (closest != null) {
+                Vector direction = closest.getLocation().toVector().subtract(player.getLocation().toVector());
+                direction.normalize();
+                
+                String message = String.format("%s%s §7%.0fm §e%s",
+                    getHealthColor(closest),
+                    getShortName(closest.getName()),
+                    minDistance,
+                    getArrowDirection(player, direction));
+                
+                sendDebugMessage(player, message);
+            }
 
         } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "Team tracker error");
-            e.printStackTrace();
+            plugin.getLogger().log(Level.WARNING, "TeamTracker error for " + player.getName(), e);
+            sendDebugMessage(player, ChatColor.RED + "Team tracker error");
         }
     }
 
-    private String buildTeammateMessage(Player player, List<Player> teammates) {
-        StringBuilder message = new StringBuilder();
-        int remainingSpace = MAX_HOTBAR_LENGTH;
-
-        for (Player teammate : teammates) {
-            if (!teammate.isOnline()) continue;
-
-            String teammateInfo = formatTeammateInfo(player, teammate);
-            
-            // Check if we have space for this teammate's info
-            if (teammateInfo.length() + 1 > remainingSpace) { // +1 for space
-                if (message.length() == 0) {
-                    // If even one teammate's info is too long, truncate
-                    return teammateInfo.substring(0, Math.min(teammateInfo.length(), MAX_HOTBAR_LENGTH));
-                }
-                break; // No more space
-            }
-
-            if (message.length() > 0) {
-                message.append(" ");
-                remainingSpace--;
-            }
-
-            message.append(teammateInfo);
-            remainingSpace -= teammateInfo.length();
-        }
-
-        return message.toString();
-    }
-
-    private String formatTeammateInfo(Player player, Player teammate) {
-        double distance = player.getLocation().distance(teammate.getLocation());
-        Vector direction = teammate.getLocation().toVector().subtract(player.getLocation().toVector());
-        direction.normalize();
-        
-        return getHealthColor(teammate) + getShortName(teammate.getName()) +
-               ChatColor.AQUA + (int)distance + "m" +
-               ChatColor.YELLOW + getArrowDirection(player, direction);
-    }
-
-    private String getShortName(String fullName) {
-        // Show first 4 characters of name to save space
-        return fullName.length() > 4 ? fullName.substring(0, 4) + "." : fullName;
-    }
-
-    private void sendSafeMessage(Player player, String message) {
+    private void sendDebugMessage(Player player, String message) {
+        plugin.getLogger().info("Sending to " + player.getName() + ": " + message);
         try {
             HotBarMessager.sendHotBarMessage(player, message);
         } catch (Exception e) {
@@ -94,10 +105,14 @@ public class TeamDistanceTracker {
         }
     }
 
+    private String getShortName(String name) {
+        return name.length() > 4 ? name.substring(0, 4) + "." : name;
+    }
+
     private ChatColor getHealthColor(Player player) {
-        double healthPercent = (player.getHealth() / player.getMaxHealth()) * 100;
-        if (healthPercent > 75) return ChatColor.GREEN;
-        if (healthPercent > 30) return ChatColor.GOLD;
+        double healthPercent = player.getHealth() / player.getMaxHealth();
+        if (healthPercent > 0.75) return ChatColor.GREEN;
+        if (healthPercent > 0.25) return ChatColor.YELLOW;
         return ChatColor.RED;
     }
 

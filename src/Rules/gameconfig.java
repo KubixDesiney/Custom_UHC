@@ -1085,6 +1085,7 @@ public class gameconfig implements Listener {
                    
                      // Only reset if staticSwitchTime > 0
                      if (staticSwitchTime > 0) {
+                    	 switchUHC.startSwitchTimer(staticSwitchTime);
                          switchTime = staticSwitchTime; // Reset timer only if switch time is configured
                      } else {
                          cancel(); // Stop the timer if no switch time is set

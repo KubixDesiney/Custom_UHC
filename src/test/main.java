@@ -38,12 +38,9 @@ public class main extends JavaPlugin{
 	public void onEnable() {
 		
 		int gamestatus = Gamestatus.getStatus();
-		distanceTracker = new TeamDistanceTracker(teamManager);
-		Bukkit.getScheduler().runTaskTimer(this, () -> {
-        	for (Player player : Bukkit.getOnlinePlayers()) {
-        		distanceTracker.updateHotBar(player);
-        	}
-		}, 0L, 1L); // Update every 10 seconds (200 ticks)
+        UHCTeamManager teamManager = new UHCTeamManager(this);
+        distanceTracker = new TeamDistanceTracker(teamManager, this);
+        distanceTracker.startTracking();
 		if (gamestatus == 1) {
 			
 
@@ -57,7 +54,6 @@ public class main extends JavaPlugin{
 		
 		damageTracker = new DamageTracker();
         this.teamSelectionSystem = new TeamSelectionSystem(teamManager, this);
-		UHCTeamManager teamManager = new UHCTeamManager(this);
 		ConfigManager configManager = new ConfigManager(this);
 		ScoreboardHandler scoreBoard = new ScoreboardHandler(this,teamManager);
 		CommandCenter commandCenter = new CommandCenter(teamManager,scoreBoard);
