@@ -29,6 +29,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.BrewerInventory;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.inventory.meta.BookMeta;
@@ -40,6 +41,7 @@ import decoration.ScoreboardHandler;
 import events.GameStartEvent;
 import events.TeamSizeChangedEvent;
 import gamemodes.Gamestatus;
+import gamemodes.SwitchUHC;
 import gamemodes.gamemode;
 import teams.UHCTeamManager;
 
@@ -77,6 +79,7 @@ public class gameconfig implements Listener {
     public static long getGameElapsedTime() {
     	return System.currentTimeMillis() -gameStartTime;
     }
+    private SwitchUHC switchUHC;
     private static int staticSwitchTime = 0;
     private static int switchTime = 0;
     private static int teamSize = 1;
@@ -88,6 +91,7 @@ public class gameconfig implements Listener {
     private final main plugin; 
     public gameconfig(main plugin) {
     	instance=this;
+    	this.switchUHC = new SwitchUHC(plugin.getTeamManager());
         this.plugin = plugin;
         for (String key : new String[]{"APPLE", "GOLDEN_APPLE", "FLINT", "FEATHER", "ARROW", "XP_BOTTLE", "ENDER_PEARL"}) {
             dropRates.put(key, plugin.getConfig().getInt("drop_rates." + key, 0));
@@ -195,56 +199,129 @@ public class gameconfig implements Listener {
     public void openGamemodeMenu(Player player) {
         Inventory gamemodeMenu = Bukkit.createInventory(null, 9, ChatColor.RED + "Game Modes");
 
-        addItem(gamemodeMenu, 0, Material.MONSTER_EGG, "§c§lUHC WEREWOLF", "§7Click to set gamemode.", "§6➢ §eGamemode: §aUHC WEREWOLF");
-        addItem(gamemodeMenu, 1, Material.BOW, "§e§lUHC SWITCH", "§7Click to set gamemode.", "§6➢ §eGamemode: §aUHC SWITCH");
-        addItem(gamemodeMenu, 2, Material.GOLDEN_APPLE, "§4MOLE UHC", "§7Click to set gamemode.", "§6➢ §eGamemode: §aMole UHC");
+        // Werewolf UHC
+        addItem(gamemodeMenu, 0, Material.MONSTER_EGG, "§c§lUHC WEREWOLF", 
+                "§7Click to set gamemode",
+                "§6➢ §eGamemode: §aUHC WEREWOLF");
+
+        // Switch UHC - add enchantment if active
+        ItemStack switchBow = new ItemStack(Material.BOW);
+        ItemMeta bowMeta = switchBow.getItemMeta();
+        bowMeta.setDisplayName("§e§lUHC SWITCH");
+        List<String> bowLore = new ArrayList<>();
+        bowLore.add("§7Click to set gamemode");
+        bowLore.add("§6➢ §eGamemode: §aUHC SWITCH");
+        bowLore.add("§6➢ §eStatus: " + (gamemode.getMode() == 2 ? "§aACTIVE" : "§cINACTIVE"));
+        bowMeta.setLore(bowLore);
+        if (gamemode.getMode() == 2) {
+            bowMeta.addEnchant(Enchantment.ARROW_INFINITE, 1, true);
+        }
+        switchBow.setItemMeta(bowMeta);
+        gamemodeMenu.setItem(1, switchBow);
+
+        // Mole UHC
+        addItem(gamemodeMenu, 2, Material.GOLDEN_APPLE, "§4MOLE UHC", 
+                "§7Click to set gamemode",
+                "§6➢ §eGamemode: §aMole UHC");
+
+        // Return arrow
         addItem(gamemodeMenu, 8, Material.ARROW, "§cReturn to Scenarios");
 
         player.openInventory(gamemodeMenu);
     }
     public void openSwitchMenu(Player player) {
-        Inventory SwitchMenu = Bukkit.createInventory(null, 9, "SwitchUHC menu");
+        Inventory SwitchMenu = Bukkit.createInventory(null, 9, "SwitchUHC Settings");
+
+        // Enable Button (Emerald Block)
+        ItemStack enableItem = new ItemStack(Material.EMERALD_BLOCK);
+        ItemMeta enableMeta = enableItem.getItemMeta();
+        enableMeta.setDisplayName("§aENABLE SWITCH");
+        enableMeta.setLore(Arrays.asList(
+            "§7Enable the player switching system",
+            "",
+            "§eStatus: " + (gamemode.getMode() == 2 ? "§aACTIVE" : "§cINACTIVE")
+        ));
+        enableItem.setItemMeta(enableMeta);
+        SwitchMenu.setItem(0, enableItem);
+
+        // Disable Button (Barrier)
+        ItemStack disableItem = new ItemStack(Material.BARRIER);
+        ItemMeta disableMeta = disableItem.getItemMeta();
+        disableMeta.setDisplayName("§cDISABLE SWITCH");
+        disableMeta.setLore(Arrays.asList(
+            "§7Disable the player switching system",
+            "",
+            "§eCurrently: " + (gamemode.getMode() != 2 ? "§cDISABLED" : "§aENABLED")
+        ));
+        disableItem.setItemMeta(disableMeta);
+        SwitchMenu.setItem(1, disableItem);
+
+        // Switch Time Configuration (Compass) - Fixed lore preservation
+        ItemStack compass = new ItemStack(Material.COMPASS);
+        ItemMeta compassMeta = compass.getItemMeta();
+        compassMeta.setDisplayName("§eSwitch Timer");
         
-        // Add compass with switch time
-        addItem(SwitchMenu, 0, Material.COMPASS, "§eSwitch Time", 
-                "§7Control when the §aswitch §7of players start",
-                "",
-                "§e➢ §7Time: " + formatTime(staticSwitchTime),
-                "",
-                "§6§l➢ §r§eClick to add 5 minutes");
+        // Create lore list separately to prevent modification
+        List<String> compassLore = new ArrayList<>();
+        compassLore.add("§7Configure when switches occur");
+        compassLore.add("");
+        compassLore.add("§e➢ Current: " + formatTime(staticSwitchTime));
+        compassLore.add("");
+        compassLore.add("§6§l➢ §eLeft-Click: Add 5 minutes");
+        compassLore.add("§6§l➢ §eRight-Click: Reset to 0");
         
-        // Add return arrow
-        addItem(SwitchMenu, 8, Material.ARROW, "§cReturn to Gamemodes");
+        compassMeta.setLore(compassLore);
         
+        // Only enchant if active
+        if (gamemode.getMode() == 2) {
+            compassMeta.addEnchant(Enchantment.LUCK, 1, true);
+            compassMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS); // Hide "enchanted" text
+        }
+        
+        compass.setItemMeta(compassMeta);
+        SwitchMenu.setItem(4, compass);
+
+        // Return Arrow
+        addItem(SwitchMenu, 8, Material.ARROW, "§cBack to Gamemodes");
+
         player.openInventory(SwitchMenu);
     }
     @EventHandler
     public void onInventoryClick6(InventoryClickEvent event) {
-        if (event.getClickedInventory() == null) return;
+        if (!event.getView().getTitle().equals("SwitchUHC Settings")) return;
         
+        event.setCancelled(true);
         Player player = (Player) event.getWhoClicked();
         ItemStack item = event.getCurrentItem();
         if (item == null || item.getType() == Material.AIR) return;
-        
-        if (event.getView().getTitle().contains("SwitchUHC menu")) {
-            event.setCancelled(true);
-            
-            if (item.getType() == Material.COMPASS) {
-            	if(event.getClick().isRightClick()) {
-                    staticSwitchTime = 0;
-                    switchTime = 0;
-            	} else {
-                addSwitchTime(5 * 60);
-                switchTime = staticSwitchTime;
+
+        switch (item.getType()) {
+            case EMERALD_BLOCK:
+                gamemode.setMode(2);
+                player.sendMessage(ChatColor.GREEN + "SwitchUHC enabled!");
                 openSwitchMenu(player);
-            	}
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    openSwitchMenu(player);
-                }, 1L);
-            } else if (item.getType() == Material.ARROW) {
-                // Return to gamemode menu
+                break;
+                
+            case BARRIER:
+                gamemode.setMode(-1);
+                player.sendMessage(ChatColor.RED + "SwitchUHC disabled!");
+                openSwitchMenu(player);
+                break;
+                
+            case COMPASS:
+                if (event.getClick().isRightClick()) {
+                    staticSwitchTime = 0;
+                    player.sendMessage(ChatColor.RED + "Switch timer reset to 0!");
+                } else {
+                    staticSwitchTime += 300; // Add 5 minutes
+                    player.sendMessage(ChatColor.GREEN + "+5 minutes! Timer: " + formatTime(staticSwitchTime));
+                }
+                openSwitchMenu(player);
+                break;
+                
+            case ARROW:
                 openGamemodeMenu(player);
-            }
+                break;
         }
     }
     @EventHandler
@@ -963,8 +1040,7 @@ public class gameconfig implements Listener {
         return String.format("%02d:%02d", minutes, seconds);
     }
      @EventHandler
-     public void onGameStart4(GameStartEvent e) {
-         // Store the static switch time when game starts
+     public void onGameStart4(GameStartEvent e) { 	 
          staticSwitchTime = switchTime;
          
          new BukkitRunnable() {
@@ -996,14 +1072,9 @@ public class gameconfig implements Listener {
                      for (Player p : Bukkit.getOnlinePlayers()) {
                          p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
                      }
-                     
+                     switchUHC.executeSwitch();
                      Bukkit.broadcastMessage("§e§lUHC §r§8➢ §aPlayers have been switched!");
-                     
-                     // Implement your switch logic here
-                     // For example:
-                     // switchPlayers();
-                     
-                     // Reset timer to static value
+                   
                      switchTime = staticSwitchTime;
                  }
              }

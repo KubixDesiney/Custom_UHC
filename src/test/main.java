@@ -37,8 +37,7 @@ public class main extends JavaPlugin{
 		
 		int gamestatus = Gamestatus.getStatus();
 		if (gamestatus == 1) {
-			int switchInterval = gameconfig.getSwitchTime();// Set the interval in minutes
-			switchUHC = new SwitchUHC(this, teamManager, 20);
+			switchUHC = new SwitchUHC(teamManager);
 			distanceTracker = new TeamDistanceTracker(teamManager);
 
 			Bukkit.getScheduler().runTaskTimer(this, () -> {
