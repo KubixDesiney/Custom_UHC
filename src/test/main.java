@@ -21,6 +21,7 @@ import listener.GlobalVariableListener;
 import listener.TeamChatListener;
 import teams.ConfigManager;
 import teams.TeamDistanceTracker;
+import teams.TeamSelectionSystem;
 import teams.UHCTeamManager;
 
 public class main extends JavaPlugin{
@@ -29,6 +30,7 @@ public class main extends JavaPlugin{
 	private UHCTeamManager teamManager;
 	private DamageTracker damageTracker;
     private TeamDistanceTracker distanceTracker;
+    private TeamSelectionSystem teamSelectionSystem;
 	private static main instance;
 	
 	
@@ -54,6 +56,7 @@ public class main extends JavaPlugin{
 		instance = this;
 		
 		damageTracker = new DamageTracker();
+        this.teamSelectionSystem = new TeamSelectionSystem(teamManager, this);
 		UHCTeamManager teamManager = new UHCTeamManager(this);
 		ConfigManager configManager = new ConfigManager(this);
 		ScoreboardHandler scoreBoard = new ScoreboardHandler(this,teamManager);

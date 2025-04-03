@@ -188,7 +188,14 @@ public class TeamSelectionSystem implements Listener {
         else if (clicked.getType() == Material.BANNER && clicked.hasItemMeta()) {
             String teamName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
             
-            if (teamManager.getAllTeams().contains(teamName)) {
+            // Check if team exists (case-insensitive)
+            Optional<String> matchingTeam = teamManager.getAllTeams().stream()
+                .filter(t -> t.equalsIgnoreCase(teamName))
+                .findFirst();
+                
+            if (matchingTeam.isPresent()) {
+                String actualTeamName = matchingTeam.get();
+                
                 // Leave current team if in one
                 String currentTeam = teamManager.getPlayerTeam(player);
                 if (currentTeam != null) {
@@ -196,14 +203,14 @@ public class TeamSelectionSystem implements Listener {
                 }
                 
                 // Check if team is full
-                if (teamManager.getPlayersInTeam(teamName).size() >= gameconfig.getTeamSize()) {
+                if (teamManager.getPlayersInTeam(actualTeamName).size() >= gameconfig.getTeamSize()) {
                     player.sendMessage(ChatColor.RED + "This team is already full!");
                     return;
                 }
                 
                 // Join the new team
-                teamManager.joinTeam(player, teamName);
-                player.sendMessage(ChatColor.GREEN + "Successfully joined team " + teamName);
+                teamManager.joinTeam(player, actualTeamName);
+                player.sendMessage(ChatColor.GREEN + "Successfully joined team " + actualTeamName);
                 player.closeInventory();
                 
                 // Update the player's inventory
