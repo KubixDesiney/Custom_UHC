@@ -202,28 +202,47 @@ public class gameconfig implements Listener {
 
         player.openInventory(gamemodeMenu);
     }
-    public void openSwitchMenu (Player player ) {
-    	Inventory SwitchMenu = Bukkit.createInventory(null, 9, "SwitchUHC menu");
-    	
-    	addItem(SwitchMenu,0, Material.COMPASS,"§eSwitch Time","§7Control when the §aswitch §7of players start"," ","§e➢ §7Time: "+ formatTime(switchTime) ,"","§6§l➢ §r§eClick to change");
-    	player.openInventory(SwitchMenu);
+    public void openSwitchMenu(Player player) {
+        Inventory SwitchMenu = Bukkit.createInventory(null, 9, "SwitchUHC menu");
+        
+        // Add compass with switch time
+        addItem(SwitchMenu, 0, Material.COMPASS, "§eSwitch Time", 
+                "§7Control when the §aswitch §7of players start",
+                "",
+                "§e➢ §7Time: " + formatTime(staticSwitchTime),
+                "",
+                "§6§l➢ §r§eClick to add 5 minutes");
+        
+        // Add return arrow
+        addItem(SwitchMenu, 8, Material.ARROW, "§cReturn to Gamemodes");
+        
+        player.openInventory(SwitchMenu);
     }
-    public void onInventoryClick6 (InventoryClickEvent event) {
-    	if (event.getClickedInventory() == null) return;
-    	
-    	Player player = (Player) event.getWhoClicked();
-    	ItemStack item = event.getCurrentItem();
-    	if (item == null || item.getType() == Material.AIR) return;
-    	
-    	if (event.getView().getTitle().contains("SwitchUHC menu")) {
-    		event.setCancelled(true);
-    	}
-    	if (event.getView().getTitle().contains("SwitchUHC menu")) {
-    		if (item.getType() == Material.COMPASS) {
-    			addSwitchTime(5);
-    			openSwitchMenu(player);
-    		}
-    	}
+    @EventHandler
+    public void onInventoryClick6(InventoryClickEvent event) {
+        if (event.getClickedInventory() == null) return;
+        
+        Player player = (Player) event.getWhoClicked();
+        ItemStack item = event.getCurrentItem();
+        if (item == null || item.getType() == Material.AIR) return;
+        
+        if (event.getView().getTitle().contains("SwitchUHC menu")) {
+            event.setCancelled(true);
+            
+            if (item.getType() == Material.COMPASS) {
+            	if(event.getClick().isRightClick()) {
+                    staticSwitchTime = 0;
+                    switchTime = 0;
+            	} else {
+                addSwitchTime(5 * 60);
+                switchTime = staticSwitchTime;
+                openSwitchMenu(player);
+            	}
+            } else if (item.getType() == Material.ARROW) {
+                // Return to gamemode menu
+                openGamemodeMenu(player);
+            }
+        }
     }
     @EventHandler
     public void onInventoryClick5(InventoryClickEvent event) {
@@ -914,8 +933,9 @@ public class gameconfig implements Listener {
             player.getInventory().remove(Material.BOOK_AND_QUILL);
         }, 1L);
     }
-    private void addSwitchTime (int minutes) {
-    	switchTime += minutes * 60;
+    private void addSwitchTime(int seconds) {
+        switchTime += seconds;
+        staticSwitchTime = switchTime; // Update the static value when manually changed
     }
     private void addMeetupTime(int minutes) {
     	meetupTime += minutes * 60;
@@ -934,6 +954,53 @@ public class gameconfig implements Listener {
         int seconds = timeInSeconds % 60;
         return String.format("%02d:%02d", minutes, seconds);
     }
+     @EventHandler
+     public void onGameStart4(GameStartEvent e) {
+         // Store the static switch time when game starts
+         staticSwitchTime = switchTime;
+         
+         new BukkitRunnable() {
+             @Override
+             public void run() {
+                 if (Gamestatus.getStatus() != 1) {
+                     cancel(); // Stop if game isn't running
+                     return;
+                 }
+                 
+                 if (switchTime > 0) {
+                     switchTime--;
+                     
+                     // Optional: Add countdown announcements like PvP timer
+                     if (switchTime == 300) { // 5 minutes left
+                         Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch will occur in §b5 §eminutes.");
+                     } else if (switchTime == 60) { // 1 minute left
+                         Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch will occur in §b1 §eminute.");
+                     } else if (switchTime <= 10 && switchTime > 0) { // 10-1 seconds left
+                         Sound sound = Sound.valueOf("BLOCK_NOTE_PLING");
+                         for (Player p : Bukkit.getOnlinePlayers()) {
+                             p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
+                         }
+                         Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch in §b" + switchTime + " §eseconds!");
+                     }
+                 } else {
+                     // When timer reaches 0
+                     Sound sound = Sound.valueOf("ENTITY_ENDERDRAGON_GROWL");
+                     for (Player p : Bukkit.getOnlinePlayers()) {
+                         p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
+                     }
+                     
+                     Bukkit.broadcastMessage("§e§lUHC §r§8➢ §aPlayers have been switched!");
+                     
+                     // Implement your switch logic here
+                     // For example:
+                     // switchPlayers();
+                     
+                     // Reset timer to static value
+                     switchTime = staticSwitchTime;
+                 }
+             }
+         }.runTaskTimer(plugin, 0L, 20L); // Run every second
+     }
      private void onGameStart3(GameStartEvent e) {
          new BukkitRunnable() {
              @Override
