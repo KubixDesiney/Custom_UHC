@@ -1076,7 +1076,7 @@ public class gameconfig implements Listener {
                      }
                  } else if (switchTime == 0) {
                      // When timer reaches 0
-                     Sound sound = Sound.valueOf("ENTITY_ENDERMAN_TELEPORT");
+                     Sound sound = Sound.valueOf("ENDERMAN_TELEPORT");
                      for (Player p : Bukkit.getOnlinePlayers()) {
                          p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
                      }

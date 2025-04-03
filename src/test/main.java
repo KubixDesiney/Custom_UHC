@@ -38,15 +38,15 @@ public class main extends JavaPlugin{
 	public void onEnable() {
 		
 		int gamestatus = Gamestatus.getStatus();
+		distanceTracker = new TeamDistanceTracker(teamManager);
+		Bukkit.getScheduler().runTaskTimer(this, () -> {
+        	for (Player player : Bukkit.getOnlinePlayers()) {
+        		distanceTracker.updateHotBar(player);
+        	}
+		}, 0L, 1L); // Update every 10 seconds (200 ticks)
 		if (gamestatus == 1) {
 			
-			distanceTracker = new TeamDistanceTracker(teamManager);
 
-			Bukkit.getScheduler().runTaskTimer(this, () -> {
-            	for (Player player : Bukkit.getOnlinePlayers()) {
-            		distanceTracker.updateHotBar(player);
-            	}
-			}, 0L, 1L); // Update every 10 seconds (200 ticks)
 		} else {
 			World world = Bukkit.getWorld("world");
 			world.setPVP(false);
