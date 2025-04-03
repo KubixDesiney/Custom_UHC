@@ -238,6 +238,9 @@ public class gameconfig implements Listener {
                 switchTime = staticSwitchTime;
                 openSwitchMenu(player);
             	}
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    openSwitchMenu(player);
+                }, 1L);
             } else if (item.getType() == Material.ARROW) {
                 // Return to gamemode menu
                 openGamemodeMenu(player);
@@ -514,104 +517,99 @@ public class gameconfig implements Listener {
         Player player = (Player) event.getWhoClicked();
         Inventory inventory = event.getInventory();
 
-        // If this is the game configuration menu
         if (inventory.getName().equals(ChatColor.GRAY + "Game Configuration")) {
-            event.setCancelled(true); // Prevent item pickup
+            event.setCancelled(true);
+            ItemStack item = event.getCurrentItem();
+            if (item == null || !item.hasItemMeta()) return;
 
-            // Handle Border Speed (Watch)
-            if (event.getCurrentItem() == null || !event.getCurrentItem().hasItemMeta()) return;
-            ItemMeta itemMeta = event.getCurrentItem().getItemMeta();
-
-            if (itemMeta.getDisplayName().equals("§eBorder Speed")) {
-                if (event.getAction() == InventoryAction.PICKUP_ALL || event.getAction() == InventoryAction.PICKUP_HALF) {
-                    // Right-click: Increase speed by 0.5 blocks per second
+            // Border Speed (Watch) handling
+            if (item.getItemMeta().getDisplayName().equals("§eBorder Speed")) {
+                if (event.getClick().isRightClick()) {
+                    // Right-click: Decrease speed by 0.5 blocks per second
+                    borderSpeed = Math.max(0.1, borderSpeed - 0.5); // Minimum speed 0.1
+                    player.sendMessage("§aBorder speed decreased to " + borderSpeed + " blocks per second.");
+                } else {
+                    // Left-click: Increase speed by 0.5 blocks per second
                     borderSpeed += 0.5;
                     player.sendMessage("§aBorder speed increased to " + borderSpeed + " blocks per second.");
-                } else if (event.getAction() == InventoryAction.PLACE_SOME) {
-                    // Left-click: Reset to 1.0 blocks per second
-                    borderSpeed = 1.0;
-                    player.sendMessage("§aBorder speed reset to 1.0 blocks per second.");
                 }
+                openMenu(player); // Refresh menu
             }
-        }
-
-        // If the item clicked is the Final Border Size (Redstone Block), open the final border size menu
-        if (inventory.getName().equals(ChatColor.GRAY + "Game Configuration") && event.getCurrentItem().getType() == Material.REDSTONE_BLOCK) {
-            // Open the final border size menu
-            openFinalBorderSizeMenu(player);
         }
     }
   
     
     public void openFinalBorderSizeMenu(Player player) {
-        Inventory menu = Bukkit.createInventory(null, 18, ChatColor.GRAY + "Final Border Size");
+        Inventory menu = Bukkit.createInventory(null, 9, ChatColor.GRAY + "Final Border Size");
 
-        // Same layout as the initial border size menu
-        ItemStack redBanner = createBanner2(ChatColor.RED, -500);
-        ItemStack orangeBanner = createBanner2(ChatColor.WHITE, -100);
-        ItemStack yellowBanner = createBanner2(ChatColor.YELLOW, -50);
-        menu.setItem(0, redBanner);
-        menu.setItem(1, orangeBanner);
-        menu.setItem(2, yellowBanner);
+        // Create banner items with clear display names
+        ItemStack size500 = createBannerItem(DyeColor.RED, "§c500 blocks", "Final size: 500x500");
+        ItemStack size100 = createBannerItem(DyeColor.WHITE, "§f100 blocks", "Final size: 100x100");
+        ItemStack size50 = createBannerItem(DyeColor.YELLOW, "§e50 blocks", "Final size: 50x50");
+        ItemStack size25 = createBannerItem(DyeColor.LIME, "§a25 blocks", "Final size: 25x25");
 
-        // Empty slot
-        menu.setItem(3, new ItemStack(Material.AIR));
+        // Center item showing current selection
+        ItemStack current = new ItemStack(Material.REDSTONE_BLOCK);
+        ItemMeta currentMeta = current.getItemMeta();
+        currentMeta.setDisplayName("§6Current: " + finalBorderSize);
+        current.setItemMeta(currentMeta);
 
-        menu.setItem(4, new ItemStack(Material.REDSTONE_BLOCK));
-
-        // Empty slot
-        menu.setItem(5, new ItemStack(Material.AIR));
-
-        // Second row (Cyan, Lime, Dark Green Banners)
-        ItemStack cyanBanner = createBanner2(ChatColor.AQUA, 50);
-        ItemStack limeBanner = createBanner2(ChatColor.GREEN, 100);
-        ItemStack darkGreenBanner = createBanner2(ChatColor.DARK_GREEN, 500);
-        menu.setItem(6, cyanBanner);
-        menu.setItem(7, limeBanner);
-        menu.setItem(8, darkGreenBanner);
-
-        // Arrow to return to the previous menu
-        ItemStack returnArrow = new ItemStack(Material.ARROW);
-        ItemMeta returnMeta = returnArrow.getItemMeta();
-        returnMeta.setDisplayName(ChatColor.YELLOW + "Return to Previous Menu");
-        returnArrow.setItemMeta(returnMeta);
-        menu.setItem(14, returnArrow);
+        // Add items to menu
+        menu.setItem(0, size500);
+        menu.setItem(1, size100);
+        menu.setItem(2, size50);
+        menu.setItem(3, size25);
+        menu.setItem(4, current); // Center position
+        
+        // Return arrow
+        ItemStack arrow = new ItemStack(Material.ARROW);
+        ItemMeta arrowMeta = arrow.getItemMeta();
+        arrowMeta.setDisplayName("§cBack to Main Menu");
+        arrow.setItemMeta(arrowMeta);
+        menu.setItem(8, arrow);
 
         player.openInventory(menu);
     }
+
+    private ItemStack createBannerItem(DyeColor color, String name, String lore) {
+        ItemStack banner = new ItemStack(Material.BANNER);
+        BannerMeta meta = (BannerMeta) banner.getItemMeta();
+        meta.setBaseColor(color);
+        meta.setDisplayName(name);
+        meta.setLore(Arrays.asList(lore, "", "§eClick to select"));
+        banner.setItemMeta(meta);
+        return banner;
+    }
     @EventHandler
     public void onFinalBorderSizeMenuClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player)) return;
-        Player player = (Player) event.getWhoClicked();
-        Inventory inventory = event.getInventory();
+        if (!(event.getView().getTitle().equals(ChatColor.GRAY + "Final Border Size"))) {
+            return;
+        }
         
-        // If this is the Final Border Size menu
-        if (inventory.getName().equals(ChatColor.GRAY + "Final Border Size")) {
-            event.setCancelled(true); // Prevent item pickup
+        event.setCancelled(true);
+        Player player = (Player) event.getWhoClicked();
+        ItemStack clicked = event.getCurrentItem();
+        
+        if (clicked == null || clicked.getType() == Material.AIR) return;
 
-            // Handle banner clicks to adjust the final border size
-            if (event.getCurrentItem() == null || !event.getCurrentItem().hasItemMeta()) return;
-            ItemMeta itemMeta = event.getCurrentItem().getItemMeta();
-
-            // Adjust the final border size based on clicked item
-            if (itemMeta.getDisplayName().equals(ChatColor.RED + "§e500 blocks")) {
+        if (clicked.getType() == Material.BANNER && clicked.hasItemMeta()) {
+            String name = clicked.getItemMeta().getDisplayName();
+            
+            if (name.contains("500")) {
                 finalBorderSize = 500;
-                player.sendMessage("§aFinal border size set to 500 blocks.");
-            } else if (itemMeta.getDisplayName().equals(ChatColor.GREEN + "§e100 blocks")) {
+            } else if (name.contains("100")) {
                 finalBorderSize = 100;
-                player.sendMessage("§aFinal border size set to 100 blocks.");
-            } else if (itemMeta.getDisplayName().equals(ChatColor.YELLOW + "§e50 blocks")) {
+            } else if (name.contains("50")) {
                 finalBorderSize = 50;
-                player.sendMessage("§aFinal border size set to 50 blocks.");
-            } else if (itemMeta.getDisplayName().equals(ChatColor.AQUA + "§e25 blocks")) {
+            } else if (name.contains("25")) {
                 finalBorderSize = 25;
-                player.sendMessage("§aFinal border size set to 25 blocks.");
             }
-
-            // Handle the return arrow to go back to the main menu
-            if (itemMeta.getDisplayName().equals(ChatColor.YELLOW + "Return to Previous Menu")) {
-                openMenu(player); // Open the main menu
-            }
+            
+            player.sendMessage("§aFinal border size set to §e" + finalBorderSize + " blocks§a.");
+            openFinalBorderSizeMenu(player); // Refresh menu
+        }
+        else if (clicked.getType() == Material.ARROW) {
+            openMenu(player); // Return to main menu
         }
     }
     
@@ -886,12 +884,20 @@ public class gameconfig implements Listener {
             	int newTeamSize = gameconfig.getTeamSize() +1;
             	gameconfig.setTeamSize(newTeamSize);
             	openMenu(player);
-            } else if (event.getSlot() == 7) { // PvP Time button clicked
-                addPvPTime(5); // Add 5 minutes
-                openMenu(player); // Update menu to reflect new PvP time
+            } else if (event.getSlot() == 7) {
+                if (event.getClick().isRightClick()) {
+                    pvpTime = 0;
+                } else {
+                    addPvPTime(5); 
+                }
+                Bukkit.getScheduler().runTaskLater(plugin, () -> openMenu(player), 1L);
             } else if (event.getSlot() == 6) {
-            	addMeetupTime(5);
-            	openMenu(player);
+                if (event.getClick().isRightClick()) {
+                    meetupTime = 0;
+                } else {
+                	addMeetupTime(5);
+                }
+                Bukkit.getScheduler().runTaskLater(plugin, () -> openMenu(player), 1L);
             } else if (event.getSlot() == 0) {
             	openSlotManagementMenu(player);
             } else if (event.getSlot() == 3) {
@@ -904,6 +910,8 @@ public class gameconfig implements Listener {
             	openScenariosMenu(player);
             } else if (event.getSlot() == 31 ) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "start");
+            } else if (event.getSlot() == 4) {
+            	openFinalBorderSizeMenu(player);
             }
         }
     }
@@ -1079,6 +1087,7 @@ public class gameconfig implements Listener {
     	                meetupTime--;
     	                // The scoreboard will be updated every second in the startUpdatingScoreboard method
     	            } else if (meetupTime == 0) {
+    	            	meetupTime = meetupTime;
 	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
 	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound2, 1.0F, 1.0F); // Play sound
 	                    }
@@ -1151,18 +1160,23 @@ public class gameconfig implements Listener {
     	        borderShrinking = true; // Lock the border speed after it is set
     	    }
     	}
-    	   public void startBorderShrink() {
-    	        World world = Bukkit.getWorld("world");
-    	        if (world == null) return;
-    	        WorldBorder worldBorder = world.getWorldBorder();
-    	        
-    	        double currentSize = worldBorder.getSize();
-    	        double distanceToShrink = currentSize - finalBorderSize;
-    	        double duration = distanceToShrink / borderSpeed; // Duration is now based on blocks per second
-    	        
-    	        worldBorder.setSize(finalBorderSize, (long) duration);
-    	        Bukkit.broadcastMessage("§aThe world border is shrinking to its final size at " + borderSpeed + " blocks per second!");
-    	    }
+    	public void startBorderShrink() {
+    	    World world = Bukkit.getWorld("world");
+    	    if (world == null) return;
+    	    WorldBorder worldBorder = world.getWorldBorder();
+    	    
+    	    double currentSize = worldBorder.getSize();
+    	    double targetSize = finalBorderSize;
+    	    
+    	    
+    	    double distanceToShrink = currentSize - targetSize;
+    	    double duration = distanceToShrink / borderSpeed; 
+    	    
+    	    worldBorder.setSize(targetSize, (long) duration);
+    	    Bukkit.broadcastMessage("§aBorder shrinking to §e" + finalBorderSize + "§a blocks at §e" + 
+    	                          borderSpeed + " blocks/sec§a. ETA: §e" + 
+    	                          formatTime((int)duration) + "§a.");
+    	}
      @EventHandler
      public void onGameStart(GameStartEvent e) {
          e.getp();
@@ -1225,6 +1239,7 @@ public class gameconfig implements Listener {
 
 	                pvpTime--; // Decrease pvpTime after the checks
 	            } else if (pvpTime == 0) {
+	            	pvpTime = pvpTime;
 	                for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
 	                    onlinePlayer.playSound(onlinePlayer.getLocation(), sound2, 1.0F, 1.0F); // PvP activated sound
 	                }
