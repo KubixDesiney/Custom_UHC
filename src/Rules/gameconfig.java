@@ -43,6 +43,7 @@ import events.TeamSizeChangedEvent;
 import gamemodes.Gamestatus;
 import gamemodes.SwitchUHC;
 import gamemodes.gamemode;
+import teams.TeamSelectionSystem;
 import teams.UHCTeamManager;
 
 import java.util.ArrayList;
@@ -55,6 +56,7 @@ import java.util.Random;
 public class gameconfig implements Listener {
     private static String gameName = "HOST";
     private static gameconfig instance;
+    private TeamSelectionSystem teamSelectionSystem;
     private final Map<String, Integer> dropRates = new HashMap<>();
 
     private final String MENU_TITLE = "Drop Rate Settings";
@@ -93,6 +95,7 @@ public class gameconfig implements Listener {
     	instance=this;
     	this.switchUHC = new SwitchUHC(plugin.getTeamManager());
         this.plugin = plugin;
+        this.teamSelectionSystem = new TeamSelectionSystem(manager, plugin);
         for (String key : new String[]{"APPLE", "GOLDEN_APPLE", "FLINT", "FEATHER", "ARROW", "XP_BOTTLE", "ENDER_PEARL"}) {
             dropRates.put(key, plugin.getConfig().getInt("drop_rates." + key, 0));
         }
@@ -297,6 +300,10 @@ public class gameconfig implements Listener {
 
         switch (item.getType()) {
             case EMERALD_BLOCK:
+                if (staticSwitchTime <= 0) {
+                    player.sendMessage(ChatColor.RED + "You must set a switch time first!");
+                    return;
+                }
                 gamemode.setMode(2);
                 player.sendMessage(ChatColor.GREEN + "SwitchUHC enabled!");
                 openSwitchMenu(player);
@@ -924,6 +931,7 @@ public class gameconfig implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        teamSelectionSystem.giveSelectionBanner(player);
         if (player.isOp()) {
             ItemStack comparator = new ItemStack(Material.REDSTONE_COMPARATOR);
             ItemMeta meta = comparator.getItemMeta();
@@ -1040,8 +1048,8 @@ public class gameconfig implements Listener {
         return String.format("%02d:%02d", minutes, seconds);
     }
      @EventHandler
-     public void onGameStart4(GameStartEvent e) { 	 
-         staticSwitchTime = switchTime;
+     public void onGameStart4(GameStartEvent e) {     
+         switchTime = staticSwitchTime; // Initialize from the configured value
          
          new BukkitRunnable() {
              @Override
@@ -1059,23 +1067,28 @@ public class gameconfig implements Listener {
                          Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch will occur in §b5 §eminutes.");
                      } else if (switchTime == 60) { // 1 minute left
                          Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch will occur in §b1 §eminute.");
-                     } else if (switchTime <= 10 && switchTime > 0) { // 10-1 seconds left
+                     } else if (switchTime <= 5 && switchTime > 0) { // 10-1 seconds left
                          Sound sound = Sound.valueOf("BLOCK_NOTE_PLING");
                          for (Player p : Bukkit.getOnlinePlayers()) {
                              p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
                          }
                          Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch in §b" + switchTime + " §eseconds!");
                      }
-                 } else {
+                 } else if (switchTime == 0) {
                      // When timer reaches 0
-                     Sound sound = Sound.valueOf("ENTITY_ENDERDRAGON_GROWL");
+                     Sound sound = Sound.valueOf("ENTITY_ENDERMAN_TELEPORT");
                      for (Player p : Bukkit.getOnlinePlayers()) {
                          p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
                      }
                      switchUHC.executeSwitch();
                      Bukkit.broadcastMessage("§e§lUHC §r§8➢ §aPlayers have been switched!");
                    
-                     switchTime = staticSwitchTime;
+                     // Only reset if staticSwitchTime > 0
+                     if (staticSwitchTime > 0) {
+                         switchTime = staticSwitchTime; // Reset timer only if switch time is configured
+                     } else {
+                         cancel(); // Stop the timer if no switch time is set
+                     }
                  }
              }
          }.runTaskTimer(plugin, 0L, 20L); // Run every second
@@ -1497,5 +1510,6 @@ public void onEntityDeath2(EntityDeathEvent event) {
         // Add more animals if needed
     }
 }
+
 }
 

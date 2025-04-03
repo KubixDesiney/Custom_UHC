@@ -37,7 +37,7 @@ public class main extends JavaPlugin{
 		
 		int gamestatus = Gamestatus.getStatus();
 		if (gamestatus == 1) {
-			switchUHC = new SwitchUHC(teamManager);
+			
 			distanceTracker = new TeamDistanceTracker(teamManager);
 
 			Bukkit.getScheduler().runTaskTimer(this, () -> {
