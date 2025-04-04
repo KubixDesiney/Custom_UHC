@@ -12,15 +12,20 @@ import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
@@ -29,6 +34,7 @@ import org.bukkit.scoreboard.Scoreboard;
 
 import com.connorlinfoot.titleapi.TitleAPI;
 
+import Rules.gameconfig;
 import events.GameStartEvent;
 import events.gameEndEvent;
 import gamemodes.Gamestatus;
@@ -40,29 +46,65 @@ import decoration.ScoreboardHandler;
 	public class GameStartListener implements Listener {
 	    private final ScoreboardHandler scoreboardHandler;
 	    private final JavaPlugin plugin;
+	    private final gameconfig config;
 
-	    public GameStartListener(JavaPlugin plugin, ScoreboardHandler scoreboardHandler) {
+	    public GameStartListener(JavaPlugin plugin, ScoreboardHandler scoreboardHandler,gameconfig config) {
+	        this.config = config;
 	        this.plugin = plugin;
 	        this.scoreboardHandler = scoreboardHandler;
 	    }
 		
-		@EventHandler
-		public void onGameStart(GameStartEvent e) {
-		    World world = Bukkit.getWorlds().get(0);
-		    Bukkit.broadcastMessage("Game started");
-		    int alive = Bukkit.getOnlinePlayers().size();
-		    Gamestatus.setAlive(alive);
+	    @EventHandler
+	    public void onGameStart(GameStartEvent e) {
+	        Bukkit.getLogger().info("GameStartEvent received!");
+	        
+	        World world = Bukkit.getWorld("world");
+	        if (world == null) {
+	            Bukkit.getLogger().warning("World is null!");
+	            return;
+	        }
 
-		    if (world != null) {
-		        // Set game rules for UHC
-		        world.setDifficulty(Difficulty.HARD); // Set difficulty to Hard
-		        
-		        // Disable natural health regeneration using a command
-		        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule naturalRegeneration false");
-		        showHealthInTablist();
-		        teleportTeamsToRandomLocation();
-		    }
-		}
+	        // Basic game setup
+	        world.setDifficulty(Difficulty.HARD);
+	        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule naturalRegeneration false");
+	        
+	        // Handle Gonefishin scenario
+	        if (config.isGoneFishinEnabled()) {
+	            Bukkit.getLogger().info("Gonefishin scenario is enabled - distributing rods");
+	            giveGoneFishinRods();
+	        } else {
+	            Bukkit.getLogger().info("Gonefishin scenario is disabled");
+	        }
+
+	        showHealthInTablist();
+	        teleportTeamsToRandomLocation();
+	    }
+
+	    private void giveGoneFishinRods() {
+	        ItemStack rod = new ItemStack(Material.FISHING_ROD);
+	        ItemMeta meta = rod.getItemMeta();
+	        
+	        meta.setDisplayName(ChatColor.AQUA + "Gone Fishin' Rod");
+	        meta.spigot().setUnbreakable(true);
+	        meta.addEnchant(Enchantment.LUCK, 255, true);
+	        meta.addEnchant(Enchantment.LURE, 3, true);
+	        
+	        List<String> lore = new ArrayList<>();
+	        lore.add(ChatColor.GRAY + "Category: Survival");
+	        lore.add("");
+	        lore.add(ChatColor.GREEN + "Unbreakable");
+	        lore.add(ChatColor.GREEN + "Luck of the Sea 255");
+	        meta.setLore(lore);
+	        
+	        rod.setItemMeta(meta);
+
+	        for (Player player : Bukkit.getOnlinePlayers()) {
+	            player.getInventory().addItem(rod);
+	            player.sendMessage(ChatColor.AQUA + "You received a Gone Fishin' rod!");
+	            
+	        }
+	    }
+
 	    private void showHealthInTablist() {
 	        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
 	            // Loop through all players

@@ -31,13 +31,18 @@ public class main extends JavaPlugin{
 	private DamageTracker damageTracker;
     private TeamDistanceTracker distanceTracker;
     private TeamSelectionSystem teamSelectionSystem;
+    private gameconfig gameConfig;
 	private static main instance;
-	
+	public gameconfig getGameConfig() {
+	    return this.gameConfig; // Assuming you store the config instance as a field
+	}
 	
 	@Override
 	public void onEnable() {
 		
+		
 		int gamestatus = Gamestatus.getStatus();
+	    this.gameConfig = new gameconfig(this);
         UHCTeamManager teamManager = new UHCTeamManager(this);
         distanceTracker = new TeamDistanceTracker(teamManager, this);
         distanceTracker.startTracking();
@@ -81,7 +86,7 @@ public class main extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(new gameconfig(this), this);
 		getServer().getPluginManager().registerEvents(new events(new UHCTeamManager(this)), this);
 		getServer().getPluginManager().registerEvents(new ScoreboardHandler(this,teamManager), this);
-		getServer().getPluginManager().registerEvents(new GameStartListener(this, scoreBoard), this);
+		getServer().getPluginManager().registerEvents(new GameStartListener(this, scoreBoard, this.gameConfig), this);
 		getServer().getConsoleSender().sendMessage(ChatColor.WHITE+"================");
 		getServer().getConsoleSender().sendMessage(" ");
 		getServer().getConsoleSender().sendMessage("Plugin name: "+ChatColor.YELLOW+"Custom_UHC");

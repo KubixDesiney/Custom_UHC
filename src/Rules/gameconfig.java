@@ -166,7 +166,7 @@ public class gameconfig implements Listener {
 
         // Line 5
         addItem(scenariosMenu, 36, Material.POTION, "§ePotion");
-        addItem1(scenariosMenu, 37, Material.FISHING_ROD, "§eFishing Rod");
+        addItem2(scenariosMenu, 37, createGoneFishinItem());
         addItem1(scenariosMenu, 38, Material.APPLE, "§eApple");
         addItem1(scenariosMenu, 39, Material.BOW, "§eBow");
         addItem1(scenariosMenu, 40, Material.IRON_AXE, "§eAxe");
@@ -331,6 +331,39 @@ public class gameconfig implements Listener {
                 break;
         }
     }
+    private boolean goneFishinEnabled = false;
+    private ItemStack createGoneFishinItem() {
+        ItemStack rod = new ItemStack(Material.FISHING_ROD);
+        ItemMeta meta = rod.getItemMeta();
+        meta.setDisplayName("§eGonefishin");
+        
+        List<String> lore = new ArrayList<>();
+        lore.add("§7Categorie : Survival");
+        lore.add(""); // Empty second line
+        lore.add("§6Features:");
+        lore.add("§7- Unlimited durability");
+        lore.add("§7- Maximum Luck of the Sea");
+        lore.add("§7- Instant catches");
+        lore.add(""); // Empty line before status
+        lore.add("§eStatus: " + (goneFishinEnabled ? "§aEnabled" : "§cDisabled"));
+        
+        meta.setLore(lore);
+        
+        if (goneFishinEnabled) {
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        
+        rod.setItemMeta(meta);
+        return rod;
+    }
+    
+    public boolean isGoneFishinEnabled() {
+        return this.goneFishinEnabled;
+    }
+    public void setGoneFishinEnabled(boolean enabled) {
+        this.goneFishinEnabled = enabled;
+    }
     @EventHandler
     public void onInventoryClick5(InventoryClickEvent event) {
         if (event.getClickedInventory() == null) return;
@@ -353,6 +386,11 @@ public class gameconfig implements Listener {
                 openScenariosMenu(player);
             } else if (item.getType() == Material.ARROW) {
                 openMenu(player);
+            } else if (item.getType() == Material.FISHING_ROD) {
+                goneFishinEnabled = !goneFishinEnabled;
+                openScenariosMenu(player);
+                String status = goneFishinEnabled ? "§aenabled" : "§cdisabled";
+                player.sendMessage("§eGonefishin scenario " + status);
             }
         }
 
@@ -1054,44 +1092,41 @@ public class gameconfig implements Listener {
          new BukkitRunnable() {
              @Override
              public void run() {
-                 if (Gamestatus.getStatus() != 1) {
-                     cancel(); // Stop if game isn't running
-                     return;
-                 }
-                 
-                 if (switchTime > 0) {
-                     switchTime--;
+            	 if (gamemode.getMode() == 2) {
+            		 if (Gamestatus.getStatus() != 1) {
+                         cancel(); // Stop if game isn't running
+                         return;
+                     }
                      
-                     // Optional: Add countdown announcements like PvP timer
-                     if (switchTime == 300) { // 5 minutes left
-                         Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch will occur in §b5 §eminutes.");
-                     } else if (switchTime == 60) { // 1 minute left
-                         Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch will occur in §b1 §eminute.");
-                     } else if (switchTime <= 5 && switchTime > 0) { // 10-1 seconds left
-                         Sound sound = Sound.valueOf("BLOCK_NOTE_PLING");
-                         for (Player p : Bukkit.getOnlinePlayers()) {
-                             p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
+                     if (switchTime > 0) {
+                         switchTime--;
+                         
+                         // Optional: Add countdown announcements like PvP timer
+                         if (switchTime == 300) { // 5 minutes left
+                             Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch will occur in §b5 §eminutes.");
+                         } else if (switchTime == 60) { // 1 minute left
+                             Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch will occur in §b1 §eminute.");
+                         } else if (switchTime <= 5 && switchTime > 0) { // 10-1 seconds left
+                             Sound sound = Sound.valueOf("BLOCK_NOTE_PLING");
+                             for (Player p : Bukkit.getOnlinePlayers()) {
+                                 p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
+                             }
+                             Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch in §b" + switchTime + " §eseconds!");
                          }
-                         Bukkit.broadcastMessage("§e§lUHC §r§8➢ §ePlayer switch in §b" + switchTime + " §eseconds!");
-                     }
-                 } else if (switchTime == 0) {
-                     // When timer reaches 0
-                     Sound sound = Sound.valueOf("ENTITY_ENDERMAN_DEATH");
-                     for (Player p : Bukkit.getOnlinePlayers()) {
-                         p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
-                     }
-                     switchUHC.executeSwitch();
-                     Bukkit.broadcastMessage("§e§lUHC §r§8➢ §aPlayers have been switched!");
-                   
-                     // Only reset if staticSwitchTime > 0
-                     if (staticSwitchTime > 0) {
-                    	 switchUHC.startSwitchTimer(staticSwitchTime);
-                         switchTime = staticSwitchTime; // Reset timer only if switch time is configured
-                     } else {
-                         cancel(); // Stop the timer if no switch time is set
+                     } else if (switchTime == 0) {
+                         // When timer reaches 0
+                         switchUHC.executeSwitch();
+                         Bukkit.broadcastMessage("§e§lUHC §r§8➢ §aPlayers have been switched!");              
+                         if (staticSwitchTime > 0) {
+                             switchTime = staticSwitchTime; // Reset timer to original value FIRST
+                             switchUHC.startSwitchTimer(staticSwitchTime); // Then restart the timer
+                         } else {
+                             cancel(); // Stop the timer if no switch time is set
+                         }
                      }
                  }
-             }
+            	 }
+                
          }.runTaskTimer(plugin, 0L, 20L); // Run every second
      }
      private void onGameStart3(GameStartEvent e) {
