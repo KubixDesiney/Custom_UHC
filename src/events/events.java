@@ -85,7 +85,7 @@ public class events implements Listener {
 		Player player = event.getPlayer();
 		for(Player all : Bukkit.getServer().getOnlinePlayers()) {
 			try {
-				HotBarMessager.sendHotBarMessage(all, "§c§l◄ §r§e"+player.getDisplayName()+" §ehas left§e(§a"+Bukkit.getServer().getOnlinePlayers().size()+"§e/§c"+Bukkit.getServer().getMaxPlayers()+"§e)");
+				HotBarMessager.sendHotBarMessage(all, "§c§l◄ §r§e"+player.getDisplayName()+" §ehas left§e(§a"+(Bukkit.getServer().getOnlinePlayers().size() - 1)+"§e/§c"+Bukkit.getServer().getMaxPlayers()+"§e)");
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -118,10 +118,6 @@ public class events implements Listener {
 	                onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F);
 	            }
 
-	            // Strike lightning at the death location
-	            LightningStrike lightning = deathLocation.getWorld().strikeLightning(deathLocation);
-	            lightningLocations.add(lightning.getLocation());
-
 
 	            // Ensure that no fire is caused by the lightning strike
 	            }
@@ -140,31 +136,6 @@ public class events implements Listener {
 		        default: return "unknown";
 		    }
 		}
-	    @EventHandler
-	    public void onLightningStrikeDamage(EntityDamageByEntityEvent event) {
-	        // Check if the entity is damaged by lightning
-	        if (event.getDamager() instanceof LightningStrike && event.getEntity() instanceof Player) {
-	            event.setCancelled(true); // Cancel the damage caused by lightning
-	        }
-	    }
-	        // Listen for block burn events
-	        @EventHandler
-	        public void onBlockBurn(BlockBurnEvent event) {
-	            Block block = event.getBlock();
-	            Location blockLocation = block.getLocation();
-
-	            boolean isNearLightning = false;
-	            for (Location lightningLocation : lightningLocations) {
-	                if (blockLocation.distanceSquared(lightningLocation) <= 25) {  
-	                    isNearLightning = true;
-	                    break;
-	                }
-	            }
-
-	            if (isNearLightning) {
-	                event.setCancelled(true);
-	            }
-	        }
 	
 	
 	@EventHandler
