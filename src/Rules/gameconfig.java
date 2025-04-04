@@ -1076,7 +1076,7 @@ public class gameconfig implements Listener {
                      }
                  } else if (switchTime == 0) {
                      // When timer reaches 0
-                     Sound sound = Sound.valueOf("ENDERMAN_TELEPORT");
+                     Sound sound = Sound.valueOf("ENTITY_ENDERMAN_DEATH");
                      for (Player p : Bukkit.getOnlinePlayers()) {
                          p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
                      }
@@ -1466,23 +1466,27 @@ public void onBlockBreak2(BlockBreakEvent event) {
         Player player = event.getPlayer();
         Block block = event.getBlock();
         int xpBoost = dropRates.getOrDefault("XP_BOTTLE", 0);
-        int boostedXp = (int) (1 * (1+ (xpBoost /100.0)));
+        int boostedXp = (int) (1 * (1 + (xpBoost / 100.0)));
         Material blockType = block.getType();
         
-        // Cancel the default block break so that the natural drops are prevented
-        event.setCancelled(true);
-
-        // Check if the block is Iron Ore or Gold Ore
-        if (blockType == Material.IRON_ORE) {
-        	player.giveExp(boostedXp);
-            block.getWorld().dropItemNaturally(block.getLocation(), new ItemStack(Material.IRON_INGOT));
-        } else if (blockType == Material.GOLD_ORE) {
-        	player.giveExp(boostedXp);
-            block.getWorld().dropItemNaturally(block.getLocation(), new ItemStack(Material.GOLD_INGOT));
+        // Only handle specific blocks, don't cancel others
+        if (blockType == Material.IRON_ORE || blockType == Material.GOLD_ORE) {
+            // Cancel the event only for these blocks
+            event.setCancelled(true);
+            
+            // Handle iron and gold ores
+            if (blockType == Material.IRON_ORE) {
+                player.giveExp(boostedXp);
+                block.getWorld().dropItemNaturally(block.getLocation(), new ItemStack(Material.IRON_INGOT));
+            } else if (blockType == Material.GOLD_ORE) {
+                player.giveExp(boostedXp);
+                block.getWorld().dropItemNaturally(block.getLocation(), new ItemStack(Material.GOLD_INGOT));
+            }
+            
+            // Break the block manually
+            block.setType(Material.AIR);
         }
-
-        // Break the block manually to simulate the block breaking animation
-        block.setType(Material.AIR);
+        // Let all other blocks break normally
     }
 }
 
@@ -1500,7 +1504,7 @@ public void onEntityDeath2(EntityDeathEvent event) {
             event.getEntity().getWorld().dropItemNaturally(event.getEntity().getLocation(), new ItemStack(Material.COOKED_BEEF));
         } else if (entityType == EntityType.PIG) {
             event.getDrops().clear();  // Remove all drops
-            event.getEntity().getWorld().dropItemNaturally(event.getEntity().getLocation(), new ItemStack(Material.PORK));
+            event.getEntity().getWorld().dropItemNaturally(event.getEntity().getLocation(), new ItemStack(Material.COOKED_BEEF));
         } else if (entityType == EntityType.CHICKEN) {
             event.getDrops().clear();  // Remove all drops
             event.getEntity().getWorld().dropItemNaturally(event.getEntity().getLocation(), new ItemStack(Material.COOKED_CHICKEN));

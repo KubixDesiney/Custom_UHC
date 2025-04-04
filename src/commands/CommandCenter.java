@@ -29,7 +29,7 @@ import events.GameStartEvent;
 import gamemodes.Gamestatus;
 
 public class CommandCenter implements CommandExecutor{
-	String maintag = "§8[§6§lCHANCE_MAKER§8§r] §7: ";
+	String maintag = "§8[§6§lCHANCE_MAKER§r§8] §7: ";
 	private Field maxPlayersField;
     private final UHCTeamManager teamManager;
     private final ScoreboardHandler scoreBoard;
@@ -46,13 +46,13 @@ public class CommandCenter implements CommandExecutor{
 		if(!(sender instanceof Player)) {
 			return true;}
 		
-		for(Player all : Bukkit.getServer().getOnlinePlayers()) {
 		if (cmd.getName().equalsIgnoreCase("healall")) {
-			double maxHealth = all.getMaxHealth();
-			double currentHealth = all.getHealth();
-			double healAmount = maxHealth - currentHealth;
-			all.setHealth(all.getHealth()+ healAmount);
-			Bukkit.broadcastMessage("§eFinalHeal has been preformed for everybody.");
+			for(Player all : Bukkit.getServer().getOnlinePlayers()) {
+				double maxHealth = all.getMaxHealth();
+				double currentHealth = all.getHealth();
+				double healAmount = maxHealth - currentHealth;
+				all.setHealth(all.getHealth()+ healAmount);
+		    Bukkit.broadcastMessage("§e§lUHC §r§eFinalHeal has been preformed for everybody.");
 		}
 		
 		}

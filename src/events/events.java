@@ -92,36 +92,77 @@ public class events implements Listener {
 		}
 	}
 	  @EventHandler
-	    public void onPlayerDeath1(PlayerDeathEvent event) {
-	        // Check if the entity is a player
-	        if (event.getEntity() instanceof Player) {
-	            Player player = (Player) event.getEntity();
-	            int dead = 0;
-	             dead = +1;
-	             int alive = Gamestatus.getAlive();
-	             Gamestatus.setAlive(alive - dead);
-	            
-	            // Get the location of the player's death
-	            Location deathLocation = player.getLocation();
-	            String teamName = teamManager.getPlayerTeam(player);
-	            EntityDamageEvent lastDamageEvent = player.getLastDamageCause();
-	            String causeMessage = (lastDamageEvent != null) ? getCauseMessage(lastDamageEvent.getCause()) : "unknown";
-	            // Create the custom death message
-	            String deathMessage = teamName + " " + player.getName() + " died by " + causeMessage;
+	  public void onPlayerDeath1(PlayerDeathEvent event) {
+	      // Check if the entity is a player
+	      if (event.getEntity() instanceof Player) {
+	          Player player = (Player) event.getEntity();
+	          int dead = 0;
+	          dead = +1;
+	          int alive = Gamestatus.getAlive();
+	          Gamestatus.setAlive(alive - dead);
+	          
+	          // Get the location of the player's death
+	          Location deathLocation = player.getLocation();
+	          String teamName = teamManager.getPlayerTeam(player);
+	          EntityDamageEvent lastDamageEvent = player.getLastDamageCause();
+	          String causeMessage = (lastDamageEvent != null) ? getCauseMessage(lastDamageEvent.getCause()) : "unknown";
+	          // Create the custom death message
+	          String deathMessage = teamName + " " + player.getName() + " died by " + causeMessage;
 
-	            // Set the custom death message
-	            event.setDeathMessage(deathMessage);
+	          // Set the custom death message
+	          event.setDeathMessage(deathMessage);
 
-	            // Play the wither spawn sound at the death location
-	            Sound sound = Sound.valueOf("ENTITY_WITHER_SPAWN");
-	            for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-	                onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F);
-	            }
+	          // Play the wither spawn sound at the death location
+	          Sound sound = Sound.valueOf("ENTITY_WITHER_SPAWN");
+	          for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	              onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F);
+	          }
 
+	          // Spawn lightning without fire and damage
+	          spawnSafeLightning(deathLocation);
+	      }
+	  }
+	  private void spawnSafeLightning(Location location) {
+		    // Store the location to track it
+		    lightningLocations.add(location);
+		    
+		    // Spawn the lightning strike
+		    LightningStrike lightning = location.getWorld().strikeLightningEffect(location);
+		    
+		    // Schedule a task to remove the location after a short delay
+		    new BukkitRunnable() {
+		        @Override
+		        public void run() {
+		            lightningLocations.remove(location);
+		        }
+		    }.runTaskLater(main.getInstance(), 20L); // Remove after 1 second (20 ticks)
+		}
+	// Add this event handler to prevent damage from our lightning strikes
+	  @EventHandler
+	  public void onEntityDamage(EntityDamageByEntityEvent event) {
+	      if (event.getDamager() instanceof LightningStrike) {
+	          LightningStrike lightning = (LightningStrike) event.getDamager();
+	          if (lightningLocations.contains(lightning.getLocation())) {
+	              event.setCancelled(true);
+	          }
+	      }
+	  }
 
-	            // Ensure that no fire is caused by the lightning strike
-	            }
-	        }
+	  // Add this event handler to prevent fire from our lightning strikes
+	  @EventHandler
+	  public void onBlockBurn(BlockBurnEvent event) {
+	      Block block = event.getBlock();
+	      for (Location loc : lightningLocations) {
+	          if (loc.getWorld().equals(block.getWorld())) {
+	              double distance = loc.distanceSquared(block.getLocation());
+	              if (distance <= 9) { // Within 3 blocks (3 squared is 9)
+	                  event.setCancelled(true);
+	                  return;
+	              }
+	          }
+	      }
+	  }
+
 	  private String getCauseMessage(EntityDamageEvent.DamageCause cause) {
 		    switch (cause) {
 		        case FALL: return "fall";

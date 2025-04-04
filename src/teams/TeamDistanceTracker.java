@@ -46,8 +46,8 @@ public class TeamDistanceTracker {
 
     private void updatePlayerHotbar(Player player) {
         try {
-            // Debug message to console
-            plugin.getLogger().info("Updating tracker for: " + player.getName());
+            
+          
             
             String teamName = teamManager.getPlayerTeam(player);
             if (teamName == null || teamName.isEmpty()) {
