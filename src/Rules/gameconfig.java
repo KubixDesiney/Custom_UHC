@@ -357,13 +357,7 @@ public class gameconfig implements Listener {
         rod.setItemMeta(meta);
         return rod;
     }
-    
-    public boolean isGoneFishinEnabled() {
-        return this.goneFishinEnabled;
-    }
-    public void setGoneFishinEnabled(boolean enabled) {
-        this.goneFishinEnabled = enabled;
-    }
+   
     @EventHandler
     public void onInventoryClick5(InventoryClickEvent event) {
         if (event.getClickedInventory() == null) return;

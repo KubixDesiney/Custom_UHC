@@ -15,7 +15,7 @@ import java.util.Random;
 
 public class GlobalVariableListener implements Listener {
     private final UHCTeamManager teamManager;
-    private final ConfigManager configManager; // New config manager
+    private final ConfigManager configManager;
 
     public GlobalVariableListener(UHCTeamManager teamManager, ConfigManager configManager) {
         this.teamManager = teamManager;
@@ -26,10 +26,17 @@ public class GlobalVariableListener implements Listener {
     public void onTeamSizeChanged(TeamSizeChangedEvent event) {
         int newTeamSize = event.getNewTeamSize();
         int serverSlot = Bukkit.getServer().getMaxPlayers();
-        int idealTeamCount = (serverSlot + newTeamSize - 1) / newTeamSize; // Proper rounding
+        int idealTeamCount = (serverSlot + newTeamSize - 1) / newTeamSize;
 
         List<String> currentTeams = UHCTeamManager.getAllTeams();
 
+        // Update the size of all existing teams first
+        for (String teamName : currentTeams) {
+            teamManager.updateTeamSize(teamName, newTeamSize);
+            Bukkit.getServer().broadcastMessage(ChatColor.YELLOW + "Updated team " + teamName + " size to " + newTeamSize);
+        }
+
+        // Then adjust the number of teams if needed
         if (currentTeams.size() > idealTeamCount) {
             removeExtraTeams(currentTeams, currentTeams.size() - idealTeamCount);
         } else if (currentTeams.size() < idealTeamCount) {
@@ -55,22 +62,17 @@ public class GlobalVariableListener implements Listener {
         for (int i = 0; i < teamsToCreate; i++) {
             String teamName = configManager.getRandomTeamName(currentTeams);
 
-            // Ensure team doesn't already exist before creating
             if (teamManager.doesTeamExist(teamName)) {
                 Bukkit.getServer().broadcastMessage(ChatColor.RED + "Skipping team creation: " + teamName + " (already exists)");
                 continue;
             }
 
-            // Get the color as a String from ConfigManager
             String teamColorString = configManager.getTeamColor(teamName);
-
-            // Create team using the string color
             teamManager.createTeam(teamName, teamColorString, teamSize);
-
-            // Broadcast team creation with color
             Bukkit.getServer().broadcastMessage(ChatColor.GREEN + "Created team: " + teamName + " with color: " + teamColorString);
         }
     }
+
     @EventHandler
     public void onServerSlotChanged(ServerSlotChangedEvent event) {
         int newSlotCount = event.getNewSlotCount();
@@ -78,6 +80,12 @@ public class GlobalVariableListener implements Listener {
         int idealTeamCount = (newSlotCount + newTeamSize - 1) / newTeamSize;
 
         List<String> currentTeams = UHCTeamManager.getAllTeams();
+
+        // Update the size of all existing teams first
+        for (String teamName : currentTeams) {
+            teamManager.updateTeamSize(teamName, newTeamSize);
+            Bukkit.getServer().broadcastMessage(ChatColor.YELLOW + "Updated team " + teamName + " size to " + newTeamSize);
+        }
 
         if (currentTeams.size() > idealTeamCount) {
             removeExtraTeams(currentTeams, currentTeams.size() - idealTeamCount);

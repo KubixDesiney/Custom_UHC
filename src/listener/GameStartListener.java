@@ -3,10 +3,6 @@ package listener;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
@@ -37,7 +33,6 @@ import com.connorlinfoot.titleapi.TitleAPI;
 import Rules.gameconfig;
 import events.GameStartEvent;
 import events.gameEndEvent;
-import gamemodes.Gamestatus;
 import teams.UHCTeamManager;
 import test.main;
 import decoration.ScoreboardHandler;
@@ -69,12 +64,6 @@ import decoration.ScoreboardHandler;
 	        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule naturalRegeneration false");
 	        
 	        // Handle Gonefishin scenario
-	        if (config.isGoneFishinEnabled()) {
-	            Bukkit.getLogger().info("Gonefishin scenario is enabled - distributing rods");
-	            giveGoneFishinRods();
-	        } else {
-	            Bukkit.getLogger().info("Gonefishin scenario is disabled");
-	        }
 
 	        showHealthInTablist();
 	        teleportTeamsToRandomLocation();
@@ -88,6 +77,7 @@ import decoration.ScoreboardHandler;
 	        meta.spigot().setUnbreakable(true);
 	        meta.addEnchant(Enchantment.LUCK, 255, true);
 	        meta.addEnchant(Enchantment.LURE, 3, true);
+	        meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE, ItemFlag.HIDE_ENCHANTS);
 	        
 	        List<String> lore = new ArrayList<>();
 	        lore.add(ChatColor.GRAY + "Category: Survival");
@@ -98,12 +88,39 @@ import decoration.ScoreboardHandler;
 	        
 	        rod.setItemMeta(meta);
 
+	        // Clear existing fishing rods first to avoid duplicates
 	        for (Player player : Bukkit.getOnlinePlayers()) {
-	            player.getInventory().addItem(rod);
+	            player.getInventory().remove(Material.FISHING_ROD);
+	            player.getInventory().addItem(rod.clone());
 	            player.sendMessage(ChatColor.AQUA + "You received a Gone Fishin' rod!");
-	            
 	        }
 	    }
+
+	    private ItemStack createGoneFishinRod() {
+	        ItemStack rod = new ItemStack(Material.FISHING_ROD);
+	        ItemMeta meta = rod.getItemMeta();
+	        
+	        // Visual Properties
+	        meta.setDisplayName(ChatColor.BLUE + "Gone Fishin' Rod");
+	        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
+	        
+	        // Enchantments
+	        meta.addEnchant(Enchantment.LUCK, 255, true);
+	        meta.addEnchant(Enchantment.LURE, 3, true);
+	        meta.spigot().setUnbreakable(true);
+	        
+	        // Lore
+	        List<String> lore = new ArrayList<>();
+	        lore.add(ChatColor.GRAY + "Category: Survival");
+	        lore.add("");
+	        lore.add(ChatColor.GREEN + "Unbreakable");
+	        lore.add(ChatColor.GREEN + "Max Luck of the Sea");
+	        meta.setLore(lore);
+	        
+	        rod.setItemMeta(meta);
+	        return rod;
+	    }
+	
 
 	    private void showHealthInTablist() {
 	        Bukkit.getScheduler().runTaskTimer(plugin, () -> {

@@ -106,7 +106,7 @@ public class SwitchUHC {
             public void run() {
                 if (switchCooldown <= 0) {
                     executeSwitch();
-                    switchCooldown = initialTime; // Reset to original time
+                    switchCooldown = initialTime; 
                 } else {
                     switchCooldown--;
                 }

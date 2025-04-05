@@ -189,6 +189,20 @@ public class UHCTeamManager {
             Bukkit.getServer().broadcastMessage(ChatColor.GREEN + "Team " + teamName + " has been removed as it is empty.");
         }
     }
+    public void updateTeamSize(String teamName, int newSize) {
+        TeamData teamData = teams.get(teamName);
+        if (teamData != null) {
+            // Update the maxSize in TeamData
+            teamData.maxSize = newSize;
+            
+            // If you want to notify about the change:
+            Bukkit.broadcastMessage(ChatColor.YELLOW + "Team " + teamName + 
+                                  " size updated to " + newSize);
+        } else {
+            Bukkit.broadcastMessage(ChatColor.RED + "Team " + teamName + 
+                                  " not found for size update");
+        }
+    }
 
     public String getPlayerTeam(Player player) {
         return playerTeams.get(player.getUniqueId());
