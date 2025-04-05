@@ -23,14 +23,12 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.BrewEvent;
-import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.inventory.BrewerInventory;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -165,6 +163,7 @@ public class gameconfig implements Listener {
         addItem1(scenariosMenu, 31, Material.LADDER, "§eLadder");
         addItem1(scenariosMenu, 32, Material.WOOD, "§eWood");
         addItem1(scenariosMenu, 33, Material.CHEST, "§eChest");
+        addItem1(scenariosMenu, 34, Material.SEA_LANTERN, "§cCatEyes");
         addItem2(scenariosMenu, 35, createCutCleanItem());
 
         // Line 5
@@ -172,7 +171,30 @@ public class gameconfig implements Listener {
         addItem2(scenariosMenu, 37, createGoneFishinItem());
         addItem1(scenariosMenu, 38, Material.APPLE, "§eApple");
         addItem1(scenariosMenu, 39, Material.BOW, "§eBow");
-        addItem1(scenariosMenu, 40, Material.IRON_AXE, "§eAxe");
+        ItemStack noBreakAxe = new ItemStack(Material.IRON_AXE);
+        ItemMeta noBreakMeta = noBreakAxe.getItemMeta();
+        noBreakMeta.setDisplayName("§eNoBreak");
+        List<String> lore = new ArrayList<>();
+        lore.add("§7Category: §aQuality of Life");
+        lore.add("");
+        lore.add("§6Features:");
+        lore.add("§7- Tools, weapons, and armor never break");
+        lore.add("§7- All items become unbreakable");
+        lore.add("");
+        lore.add("§eStatus: " + (noBreakEnabled ? "§aEnabled" : "§cDisabled"));
+        noBreakMeta.setLore(lore);
+
+        // Add enchantment glow if enabled
+        if (noBreakEnabled) {
+            noBreakMeta.addEnchant(Enchantment.DURABILITY, 1, true);
+            noBreakMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+
+        noBreakAxe.setItemMeta(noBreakMeta);
+        addItem2(scenariosMenu, 40, noBreakAxe);
+
+        // 2. Update the click handler (around line 540) to properly refresh the enchantment:
+  
         addItem1(scenariosMenu, 41, Material.BREAD, "§eBread");
         addItem1(scenariosMenu, 42, Material.IRON_SWORD, "§eIron Sword");
         addItem1(scenariosMenu, 43, Material.COOKIE, "§eCookie");
@@ -184,6 +206,75 @@ public class gameconfig implements Listener {
 
         player.openInventory(scenariosMenu);
     }
+    private boolean noBreakEnabled = false;
+ // 4. Add these new methods somewhere in the class
+    private void makeAllItemsUnbreakable() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            // Armor
+            for (ItemStack armor : player.getInventory().getArmorContents()) {
+                if (armor != null) {
+                    makeUnbreakable(armor);
+                }
+            }
+            
+            // Inventory items
+            for (ItemStack item : player.getInventory().getContents()) {
+                if (item != null && isBreakableItem(item.getType())) {
+                    makeUnbreakable(item);
+                }
+            }
+        }
+    }
+
+    private void makeAllItemsBreakable() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            // Armor
+            for (ItemStack armor : player.getInventory().getArmorContents()) {
+                if (armor != null) {
+                    makeBreakable(armor);
+                }
+            }
+            
+            // Inventory items
+            for (ItemStack item : player.getInventory().getContents()) {
+                if (item != null && isBreakableItem(item.getType())) {
+                    makeBreakable(item);
+                }
+            }
+        }
+    }
+
+    private void makeUnbreakable(ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        meta.spigot().setUnbreakable(true);
+        meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
+        item.setItemMeta(meta);
+    }
+
+    private void makeBreakable(ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        meta.spigot().setUnbreakable(false);
+        item.setItemMeta(meta);
+    }
+
+    private boolean isBreakableItem(Material material) {
+        return material.name().endsWith("_AXE") || 
+               material.name().endsWith("_PICKAXE") || 
+               material.name().endsWith("_SHOVEL") || 
+               material.name().endsWith("_HOE") || 
+               material.name().endsWith("_SWORD") || 
+               material.name().endsWith("_HELMET") || 
+               material.name().endsWith("_CHESTPLATE") || 
+               material.name().endsWith("_LEGGINGS") || 
+               material.name().endsWith("_BOOTS") || 
+               material == Material.BOW || 
+               material == Material.FISHING_ROD || 
+               material == Material.SHEARS || 
+               material == Material.FLINT_AND_STEEL;
+    }
+
+    // 5. Add this to the GameStartEvent handler (around line 1830)
+    
  // ✅ Fix addItem1 to Work for All Items
     private void addItem1(Inventory inv, int slot, Material material, String name, String... lore) {
         ItemStack item = new ItemStack(material);
@@ -400,6 +491,28 @@ public class gameconfig implements Listener {
                     
                     String status = goneFishinEnabled ? "§aENABLED" : "§cDISABLED";
                     player.sendMessage("§eGone Fishin' scenario: " + status);
+                    event.setCancelled(true);
+                }  else  if (item.getType() == Material.IRON_AXE && item.getItemMeta().getDisplayName().equals("§eNoBreak")) {
+                    noBreakEnabled = !noBreakEnabled;
+                    
+                    // Save to config
+                    plugin.getConfig().set("scenarios.no_break", noBreakEnabled);
+                    plugin.saveConfig();
+                    
+                    // Update the menu with new enchantment state
+                    openScenariosMenu(player);
+                    
+                    // Apply/remove unbreakable to all items if game is running
+                    if (Gamestatus.getStatus() == 1) {
+                        if (noBreakEnabled) {
+                            makeAllItemsUnbreakable();
+                        } else {
+                            makeAllItemsBreakable();
+                        }
+                    }
+                    
+                    String status = noBreakEnabled ? "§aENABLED" : "§cDISABLED";
+                    player.sendMessage("§eNoBreak scenario: " + status);
                     event.setCancelled(true);
                 }
         }
