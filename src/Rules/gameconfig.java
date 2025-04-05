@@ -6,6 +6,7 @@ import test.main;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.DyeColor;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -19,10 +20,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.BrewEvent;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -518,33 +521,72 @@ public class gameconfig implements Listener {
 
     @EventHandler
     public void onPotionBrew(BrewEvent event) {
-        BrewerInventory inv = event.getContents();
-        for (ItemStack item : inv.getContents()) {
+        // If all potions are enabled, skip individual checks (only enforce level/duration)
+        if (allPotionsEnabled) {
+            // Check level and duration restrictions
+            for (ItemStack item : event.getContents().getContents()) {
+                if (item != null && item.getType() == Material.POTION) {
+                    Potion potion = Potion.fromItemStack(item);
+                    if (potion != null) {
+                        if (!levelTwoPotionsEnabled && potion.getLevel() > 1) {
+                            event.setCancelled(true);
+                            return;
+                        }
+                        if (!extendedPotionsEnabled && potion.hasExtendedDuration()) {
+                            event.setCancelled(true);
+                            return;
+                        }
+                    }
+                }
+            }
+            return; // Allow brewing since all potions are enabled
+        }
+
+        // If "All Potions" is disabled, check individual potion permissions
+        for (ItemStack item : event.getContents().getContents()) {
             if (item != null && item.getType() == Material.POTION) {
                 Potion potion = Potion.fromItemStack(item);
                 if (potion != null) {
+                    // Check if the potion type is allowed
                     switch (potion.getType()) {
                         case STRENGTH:
-                            if (!strengthPotionEnabled) event.setCancelled(true);
+                            if (!strengthPotionEnabled) {
+                                event.setCancelled(true);
+                                return;
+                            }
                             break;
                         case POISON:
-                            if (!poisonPotionEnabled) event.setCancelled(true);
+                            if (!poisonPotionEnabled) {
+                                event.setCancelled(true);
+                                return;
+                            }
                             break;
                         case INSTANT_HEAL:
-                            if (!healingPotionEnabled) event.setCancelled(true);
+                            if (!healingPotionEnabled) {
+                                event.setCancelled(true);
+                                return;
+                            }
                             break;
                         case SPEED:
-                            if (!speedPotionEnabled) event.setCancelled(true);
+                            if (!speedPotionEnabled) {
+                                event.setCancelled(true);
+                                return;
+                            }
                             break;
-					default:
-						event.setCancelled(true);
-						break;
+                        default:
+                            // If it's not a handled potion type, cancel by default (optional)
+                            event.setCancelled(true);
+                            return;
                     }
+
+                    // Check level and duration restrictions
                     if (!levelTwoPotionsEnabled && potion.getLevel() > 1) {
                         event.setCancelled(true);
+                        return;
                     }
                     if (!extendedPotionsEnabled && potion.hasExtendedDuration()) {
                         event.setCancelled(true);
+                        return;
                     }
                 }
             }
@@ -1042,10 +1084,293 @@ public class gameconfig implements Listener {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "start");
             } else if (event.getSlot() == 4) {
             	openFinalBorderSizeMenu(player);
+            } else if (event.getSlot() == 12) { // Starting Items slot
+                openStartingItemsViewer(player);
             }
         }
     }
+    private static ItemStack[] startingInventory = new ItemStack[36]; // Main inventory (0-35)
+    private static ItemStack[] startingArmor = new ItemStack[4];     // Armor (helmet, chestplate, leggings, boots)
+    public static ItemStack[] getStartingInventory() {
+        return startingInventory;
+    }
 
+    public static ItemStack[] getStartingArmor() {
+        return startingArmor;
+    }
+
+    public void openStartingItemsViewer(Player player) {
+        Inventory menu = Bukkit.createInventory(null, 54, ChatColor.GOLD + "Starting Items (Preview)");
+
+        // Display saved armor (slots 36-39)
+        if (startingArmor != null) {
+            menu.setItem(36, startingArmor[0] != null ? startingArmor[0].clone() : null); // Helmet
+            menu.setItem(37, startingArmor[1] != null ? startingArmor[1].clone() : null); // Chestplate
+            menu.setItem(38, startingArmor[2] != null ? startingArmor[2].clone() : null); // Leggings
+            menu.setItem(39, startingArmor[3] != null ? startingArmor[3].clone() : null); // Boots
+        }
+
+        // Display saved inventory (slots 0-35)
+        if (startingInventory != null) {
+            for (int i = 0; i < startingInventory.length; i++) {
+                if (startingInventory[i] != null) {
+                    menu.setItem(i, startingInventory[i].clone());
+                }
+            }
+        }
+
+        // Return arrow (Slot 50)
+        ItemStack returnArrow = new ItemStack(Material.ARROW);
+        ItemMeta arrowMeta = returnArrow.getItemMeta();
+        arrowMeta.setDisplayName(ChatColor.YELLOW + "§cBack to Main Menu");
+        returnArrow.setItemMeta(arrowMeta);
+        menu.setItem(50, returnArrow);
+
+        // "Edit" button (Slot 53 - replaces the door)
+        ItemStack editButton = new ItemStack(Material.WOOD_DOOR);
+        ItemMeta editMeta = editButton.getItemMeta();
+        editMeta.setDisplayName(ChatColor.GREEN + "§aEdit Starting Items");
+        editMeta.setLore(Arrays.asList(
+            "§7Click to enter setup mode.",
+            "§7You will be put in Creative Mode.",
+            "§7Type §a/finish §7when done."
+        ));
+        editButton.setItemMeta(editMeta);
+        menu.setItem(53, editButton);
+
+        player.openInventory(menu);
+    }
+    public void openStartingItemsEditor(Player player) {
+        // Clear the player's inventory and load saved items (if they exist)
+        player.getInventory().clear();
+        player.getInventory().setArmorContents(null);
+
+        if (startingInventory != null) {
+            player.getInventory().setContents(startingInventory);
+        }
+        if (startingArmor != null) {
+            player.getInventory().setArmorContents(startingArmor);
+        }
+
+        // Switch to Creative Mode
+        player.setGameMode(GameMode.CREATIVE);
+        player.sendMessage(ChatColor.GREEN + "§aYou are now editing starting items!");
+        player.sendMessage(ChatColor.GREEN + "§aModify your inventory and type §e/finish §awhen done.");
+    }
+    @EventHandler
+    public void onStartingItemsViewerClick(InventoryClickEvent event) {
+        if (!event.getView().getTitle().equals(ChatColor.GOLD + "Starting Items (Preview)")) return;
+        event.setCancelled(true);
+
+        Player player = (Player) event.getWhoClicked();
+        int slot = event.getSlot();
+
+        if (slot == 50) { // Return to main menu
+            openMenu(player);
+        } else if (slot == 53) { // Edit button
+            player.closeInventory();
+            openStartingItemsEditor(player); // Switches to edit mode
+        }
+    }
+    @EventHandler
+    public void onStartingItemsMenuClick(InventoryClickEvent event) {
+        if (!event.getView().getTitle().equals(ChatColor.GOLD + "Starting Items Setup")) return;
+        event.setCancelled(true);
+
+        Player player = (Player) event.getWhoClicked();
+        int slot = event.getSlot();
+
+        // Return to main menu (Slot 50)
+        if (slot == 49) {
+            openMenu(player);
+        }
+        // Configure door (Slot 53)
+        else if (slot == 53) {
+            player.closeInventory();
+            player.setGameMode(GameMode.CREATIVE);
+            player.sendMessage(ChatColor.GREEN + "§aYou are now in setup mode!");
+            player.sendMessage(ChatColor.GREEN + "§aEdit your inventory and type §e/finish §awhen done.");
+        }
+    }
+    @EventHandler
+    public void onBlockBreak1(BlockBreakEvent event) {
+        if (event.getPlayer().getGameMode() == GameMode.CREATIVE) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onBlockPlace(BlockPlaceEvent event) {
+        if (event.getPlayer().getGameMode() == GameMode.CREATIVE) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
+        String command = event.getMessage().toLowerCase();
+
+        if (command.equals("/finish")) {
+            if (player.getGameMode() == GameMode.CREATIVE) {
+                // Save the edited items
+                startingInventory = player.getInventory().getContents();
+                startingArmor = player.getInventory().getArmorContents();
+
+                // Clear inventory and restore original tools
+                player.getInventory().clear();
+                player.getInventory().setArmorContents(null);
+
+                if (player.isOp()) {
+                    // Give back config comparator
+                    ItemStack comparator = new ItemStack(Material.REDSTONE_COMPARATOR);
+                    ItemMeta meta = comparator.getItemMeta();
+                    meta.setDisplayName("§eGame Config");
+                    comparator.setItemMeta(meta);
+                    player.getInventory().addItem(comparator);
+
+                    // Give back team banner (if teams enabled)
+                    if (teamSize > 1) {
+                        teamSelectionSystem.giveSelectionBanner(player);
+                    }
+                }
+
+                player.setGameMode(GameMode.SURVIVAL);
+                player.sendMessage(ChatColor.GREEN + "§aStarting items saved!");
+            }
+            event.setCancelled(true);
+        }
+    }
+    @EventHandler
+    public void onPlayerCommand1(PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
+        String command = event.getMessage().toLowerCase();
+
+        if (command.equals("/enchant")) {
+            if (player.getGameMode() == GameMode.CREATIVE) {
+                openEnchantMenu(player);
+            } else {
+                player.sendMessage(ChatColor.RED + "§cYou must be in setup mode to use this!");
+            }
+            event.setCancelled(true);
+        }
+    }
+    public void openEnchantMenu(Player player) {
+        Inventory menu = Bukkit.createInventory(null, 36, ChatColor.DARK_PURPLE + "Tool Enchanting");
+
+        ItemStack tool = player.getInventory().getItemInHand();
+        if (tool == null || tool.getType() == Material.AIR) {
+            player.sendMessage(ChatColor.RED + "Hold a tool/armor to enchant!");
+            return;
+        }
+
+        // List all possible enchantments for the tool
+        List<Enchantment> possibleEnchants = new ArrayList<>();
+        for (Enchantment enchant : Enchantment.values()) {
+            if (enchant.canEnchantItem(tool)) {
+                possibleEnchants.add(enchant);
+            }
+        }
+
+        // Fill the menu with enchantment books
+        for (int i = 0; i < possibleEnchants.size() && i < 27; i++) {
+            Enchantment enchant = possibleEnchants.get(i);
+            ItemStack book = new ItemStack(Material.ENCHANTED_BOOK);
+            ItemMeta meta = book.getItemMeta();
+            meta.setDisplayName(ChatColor.GOLD + enchant.getName());
+            
+            // Check current level (if already applied)
+            int currentLevel = tool.getEnchantmentLevel(enchant);
+            
+            meta.setLore(Arrays.asList(
+                "§7Current: §e" + currentLevel,
+                "§aLeft-Click: +1 Level",
+                "§cRight-Click: -1 Level"
+            ));
+            book.setItemMeta(meta);
+            menu.setItem(i, book);
+        }
+
+        // Add a "Back" button (Slot 35)
+        ItemStack backButton = new ItemStack(Material.ARROW);
+        ItemMeta backMeta = backButton.getItemMeta();
+        backMeta.setDisplayName(ChatColor.RED + "Back");
+        backButton.setItemMeta(backMeta);
+        menu.setItem(35, backButton);
+
+        player.openInventory(menu);
+    }
+    @EventHandler
+    public void onEnchantMenuClick(InventoryClickEvent event) {
+        if (!event.getView().getTitle().equals(ChatColor.DARK_PURPLE + "Tool Enchanting")) return;
+        event.setCancelled(true);
+
+        Player player = (Player) event.getWhoClicked();
+        ItemStack clicked = event.getCurrentItem();
+
+        if (clicked == null || clicked.getType() == Material.AIR) return;
+
+        // Back button (Slot 35)
+        if (clicked.getType() == Material.ARROW && event.getSlot() == 35) {
+            player.closeInventory();
+            return;
+        }
+
+        // If an enchantment book is clicked
+        if (clicked.getType() == Material.ENCHANTED_BOOK) {
+            ItemStack tool = player.getInventory().getItemInHand();
+            if (tool == null || tool.getType() == Material.AIR) {
+                player.sendMessage(ChatColor.RED + "Hold a tool/armor to enchant!");
+                return;
+            }
+
+            String enchantName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
+            Enchantment enchant = Enchantment.getByName(enchantName);
+            if (enchant == null) return;
+
+            int currentLevel = tool.getEnchantmentLevel(enchant);
+
+            if (event.getClick().isLeftClick()) {
+                currentLevel++;
+                tool.addUnsafeEnchantment(enchant, currentLevel);
+            } else if (event.getClick().isRightClick()) {
+                if (currentLevel <= 1) {
+                    tool.removeEnchantment(enchant); // Remove if level is 1 or 0
+                    currentLevel = 0;
+                } else {
+                    currentLevel--;
+                    tool.addUnsafeEnchantment(enchant, currentLevel);
+                }
+            }
+
+            // Update the book's display
+            ItemMeta meta = clicked.getItemMeta();
+            meta.setLore(Arrays.asList(
+                "§7Current: §e" + currentLevel,
+                "§aLeft-Click: +1 Level",
+                "§cRight-Click: -1 Level"
+            ));
+            clicked.setItemMeta(meta);
+
+            player.updateInventory();
+        }
+    }
+    private Enchantment getRandomEnchantForTool(Material toolType) {
+        if (toolType == Material.DIAMOND_SWORD || toolType == Material.IRON_SWORD) {
+            return Enchantment.DAMAGE_ALL; // Sharpness
+        } else if (toolType == Material.DIAMOND_PICKAXE || toolType == Material.IRON_PICKAXE) {
+            return Enchantment.DIG_SPEED; // Efficiency
+        } else if (toolType == Material.DIAMOND_AXE || toolType == Material.IRON_AXE) {
+            return Enchantment.DIG_SPEED; // Efficiency
+        } else if (toolType == Material.BOW) {
+            return Enchantment.ARROW_DAMAGE; // Power
+        } else if (toolType.name().endsWith("_HELMET") || toolType.name().endsWith("_CHESTPLATE") 
+                || toolType.name().endsWith("_LEGGINGS") || toolType.name().endsWith("_BOOTS")) {
+            return Enchantment.PROTECTION_ENVIRONMENTAL; // Protection
+        } else {
+            return Enchantment.DURABILITY; // Unbreaking (fallback)
+        }
+    }
 
     private void giveGameNameBook(Player player) {
         ItemStack book = new ItemStack(Material.BOOK_AND_QUILL);

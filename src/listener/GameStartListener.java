@@ -53,7 +53,7 @@ import decoration.ScoreboardHandler;
                      .getGameConfig().goneFishinEnabled;
 	    	Bukkit.getLogger().info("[GAME START] Checking Gone Fishin': " + isGoneFishinEnabled);
 	        Bukkit.getLogger().info("GameStartEvent received!");
-	        
+	        giveStartingItemsToAllPlayers();
 	        World world = Bukkit.getWorld("world");
 	        if (world == null) {
 	            Bukkit.getLogger().warning("World is null!");
@@ -71,6 +71,28 @@ import decoration.ScoreboardHandler;
 
 	        showHealthInTablist();
 	        teleportTeamsToRandomLocation();
+	    }
+	    private void giveStartingItemsToAllPlayers() {
+	        // Get the saved starting inventory from gameconfig
+	        ItemStack[] startingInventory = gameconfig.getStartingInventory();
+	        ItemStack[] startingArmor = gameconfig.getStartingArmor();
+
+	        for (Player player : Bukkit.getOnlinePlayers()) {
+	            // Clear the player's inventory completely
+	            player.getInventory().clear();
+	            player.getInventory().setArmorContents(null);
+
+	            // Give saved items (if they exist)
+	            if (startingInventory != null) {
+	                player.getInventory().setContents(startingInventory);
+	            }
+	            if (startingArmor != null) {
+	                player.getInventory().setArmorContents(startingArmor);
+	            }
+
+	            player.updateInventory();
+	            player.sendMessage(ChatColor.GREEN + "§aYou received the starting items!");
+	        }
 	    }
 
 	    private void giveGoneFishinRods() {

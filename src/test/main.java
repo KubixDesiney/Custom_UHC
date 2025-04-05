@@ -40,11 +40,11 @@ public class main extends JavaPlugin{
 	@Override
 	public void onEnable() {
 		
-		
+	    this.saveDefaultConfig();
+	    this.reloadConfig();
 		int gamestatus = Gamestatus.getStatus();
 	    this.gameConfig = new gameconfig(this);
 	    gameConfig.goneFishinEnabled = getConfig().getBoolean("scenarios.gone_fishin", false);
-	    this.reloadConfig();
         this.teamManager = new UHCTeamManager(this);
         distanceTracker = new TeamDistanceTracker(teamManager, this);
         distanceTracker.startTracking();
