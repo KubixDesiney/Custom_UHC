@@ -384,11 +384,21 @@ public class gameconfig implements Listener {
             } else if (item.getType() == Material.ARROW) {
                 openMenu(player);
             } else if (item.getType() == Material.FISHING_ROD) {
-                goneFishinEnabled = !goneFishinEnabled;
-                openScenariosMenu(player);
-                String status = goneFishinEnabled ? "§aenabled" : "§cdisabled";
-                player.sendMessage("§eGonefishin scenario " + status);
-            }
+                    goneFishinEnabled = !goneFishinEnabled;
+                    
+                    // Save to config file
+                    plugin.getConfig().set("scenarios.gone_fishin", goneFishinEnabled);
+                    plugin.saveConfig();
+                    
+                    Bukkit.getLogger().info("[CONFIG] Gone Fishin' set to: " + goneFishinEnabled);
+                    
+                    // Update the menu item
+                    event.getInventory().setItem(event.getSlot(), createGoneFishinItem());
+                    
+                    String status = goneFishinEnabled ? "§aENABLED" : "§cDISABLED";
+                    player.sendMessage("§eGone Fishin' scenario: " + status);
+                    event.setCancelled(true);
+                }
         }
 
         // Handle gamemode changes

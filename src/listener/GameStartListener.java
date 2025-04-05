@@ -39,18 +39,19 @@ import decoration.ScoreboardHandler;
 
 
 	public class GameStartListener implements Listener {
-	    private final ScoreboardHandler scoreboardHandler;
 	    private final JavaPlugin plugin;
 	    private final gameconfig config;
 
 	    public GameStartListener(JavaPlugin plugin, ScoreboardHandler scoreboardHandler,gameconfig config) {
 	        this.config = config;
 	        this.plugin = plugin;
-	        this.scoreboardHandler = scoreboardHandler;
 	    }
 		
 	    @EventHandler
 	    public void onGameStart(GameStartEvent e) {
+	    	 boolean isGoneFishinEnabled = ((main)Bukkit.getPluginManager().getPlugin("Custom_UHC"))
+                     .getGameConfig().goneFishinEnabled;
+	    	Bukkit.getLogger().info("[GAME START] Checking Gone Fishin': " + isGoneFishinEnabled);
 	        Bukkit.getLogger().info("GameStartEvent received!");
 	        
 	        World world = Bukkit.getWorld("world");
@@ -62,7 +63,7 @@ import decoration.ScoreboardHandler;
 	        
 	        world.setDifficulty(Difficulty.HARD);
 	        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule naturalRegeneration false");
-	        if (config.goneFishinEnabled) {
+	        if (isGoneFishinEnabled) {
 	            Bukkit.getLogger().info("Gone Fishin' scenario is enabled - giving rods");
 	            giveGoneFishinRods();
 	        }
@@ -73,22 +74,13 @@ import decoration.ScoreboardHandler;
 	    }
 
 	    private void giveGoneFishinRods() {
-	        ItemStack rod = createGoneFishinRod();
+	        Bukkit.getLogger().info("[DEBUG] Attempting to give rods to " + Bukkit.getOnlinePlayers().size() + " players");
 	        
 	        for (Player player : Bukkit.getOnlinePlayers()) {
-	            try {
-	                // Clear existing rods
-	                player.getInventory().remove(Material.FISHING_ROD);
-	                
-	                // Give new rod
-	                player.getInventory().addItem(rod.clone());
-	                player.sendMessage(ChatColor.AQUA + "You received a Gone Fishin' rod!");
-	            } catch (Exception ex) {
-	                Bukkit.getLogger().warning("Error giving rod to " + player.getName() + ": " + ex.getMessage());
-	            }
+	            Bukkit.getLogger().info("[DEBUG] Processing " + player.getName());
+	            player.getInventory().addItem(createGoneFishinRod());
+	            player.sendMessage(ChatColor.AQUA + "You received a Gone Fishin' rod!");
 	        }
-	        
-	        Bukkit.broadcastMessage(ChatColor.AQUA + "" + ChatColor.BOLD + "Gone Fishin' scenario is active!");
 	    }
 
 	    private ItemStack createGoneFishinRod() {
