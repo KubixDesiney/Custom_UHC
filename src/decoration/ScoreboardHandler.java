@@ -91,14 +91,12 @@ public class ScoreboardHandler implements Listener {
         
         long elapsedTime = gameconfig.getGameElapsedTime();
 
-        int minutes = (int) (elapsedTime / 60000);
-        int seconds = (int) ((elapsedTime / 1000) % 60);
-        int hours = (int) (elapsedTime / 3600000);  
-
-        if (minutes >= 60) {
-            minutes = minutes % 60;  
-            hours = hours + 1;       
-        }
+        // Correct time calculation
+        int totalSeconds = (int) (elapsedTime / 1000);
+        int hours = totalSeconds / 3600;
+        int remainingSeconds = totalSeconds % 3600;
+        int minutes = remainingSeconds / 60;
+        int seconds = remainingSeconds % 60;
 
         String formattedTime = String.format("%02d:%02d:%02d", hours, minutes, seconds);
 

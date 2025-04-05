@@ -331,7 +331,10 @@ public class gameconfig implements Listener {
                 break;
         }
     }
-    private boolean goneFishinEnabled = false;
+    public boolean isGoneFishinEnabled() {
+        return goneFishinEnabled;
+    }
+    public boolean goneFishinEnabled = false;
     private ItemStack createGoneFishinItem() {
         ItemStack rod = new ItemStack(Material.FISHING_ROD);
         ItemMeta meta = rod.getItemMeta();
@@ -1122,19 +1125,6 @@ public class gameconfig implements Listener {
             	 }
                 
          }.runTaskTimer(plugin, 0L, 20L); // Run every second
-     }
-     private void onGameStart3(GameStartEvent e) {
-         new BukkitRunnable() {
-             @Override
-             public void run() {
-                 if (switchTime <= 0) {
-                     ; // Call custom logic when timer hits 00:00
-                     switchTime = staticSwitchTime; // Reset timer
-                 }
-                 
-                 switchTime--;
-             }
-         }.runTaskTimer(plugin, 0L, 20L); // Runs every second
      }
 
      @EventHandler

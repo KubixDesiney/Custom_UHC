@@ -97,7 +97,7 @@ public class TeamDistanceTracker {
     }
 
     private void sendDebugMessage(Player player, String message) {
-        plugin.getLogger().info("Sending to " + player.getName() + ": " + message);
+        
         try {
             HotBarMessager.sendHotBarMessage(player, message);
         } catch (Exception e) {
