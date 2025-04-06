@@ -70,7 +70,7 @@ public class TeamSelectionSystem implements Listener {
         Inventory menu = Bukkit.createInventory(null, 54, ChatColor.BLUE + "Select Team - Page " + (page + 1));
         setupMenuBorders(menu);
         
-        List<String> allTeams = teamManager.getAllTeams();
+        List<String> allTeams = UHCTeamManager.getAllTeams();
         int totalPages = (int) Math.ceil((double) allTeams.size() / TEAMS_PER_PAGE);
         
         // Add teams to current page
@@ -119,7 +119,7 @@ public class TeamSelectionSystem implements Listener {
         meta.setBaseColor(DyeColor.WHITE);
         meta.setDisplayName(ChatColor.WHITE + teamName);
         
-        List<Player> members = teamManager.getPlayersInTeam(teamName);
+        List<Player> members = UHCTeamManager.getPlayersInTeam(teamName);
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + "Team Members (" + members.size() + "/" + gameconfig.getTeamSize() + "):");
         lore.add(" ");
@@ -189,7 +189,7 @@ public class TeamSelectionSystem implements Listener {
             String teamName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
             
             // Check if team exists (case-insensitive)
-            Optional<String> matchingTeam = teamManager.getAllTeams().stream()
+            Optional<String> matchingTeam = UHCTeamManager.getAllTeams().stream()
                 .filter(t -> t.equalsIgnoreCase(teamName))
                 .findFirst();
                 
@@ -203,7 +203,7 @@ public class TeamSelectionSystem implements Listener {
                 }
                 
                 // Check if team is full
-                if (teamManager.getPlayersInTeam(actualTeamName).size() >= gameconfig.getTeamSize()) {
+                if (UHCTeamManager.getPlayersInTeam(actualTeamName).size() >= gameconfig.getTeamSize()) {
                     player.sendMessage(ChatColor.RED + "This team is already full!");
                     return;
                 }
