@@ -14,6 +14,7 @@ public class UHCTeamManager {
     private final Map<String, TeamData> teams = new HashMap<>();
     private final static Map<UUID, String> playerTeams = new HashMap<>();
     private static Scoreboard scoreboard = null;
+    private final ConfigManager configManager;
     public static List<Player> getPlayersInTeam(String teamName) {
        List<Player> players = new ArrayList<>();
        for (Map.Entry<UUID, String> entry : playerTeams.entrySet()) {
@@ -27,7 +28,8 @@ public class UHCTeamManager {
        return players;
    }
 
-    public UHCTeamManager(JavaPlugin plugin) {
+    public UHCTeamManager(JavaPlugin plugin, ConfigManager configManager) {
+        this.configManager = configManager;
     	ScoreboardManager manager = Bukkit.getScoreboardManager();
         if (manager != null) {
             scoreboard = manager.getMainScoreboard();
@@ -106,34 +108,16 @@ public class UHCTeamManager {
 
         // Ensure the team isn't full
         if (getPlayersInTeam(teamName).size() < teamData.maxSize) {
-            // Add the player to the team on the scoreboard
-            team.addEntry(playerName);  // This adds the player to the team
-
+            team.addEntry(playerName);
             playerTeams.put(player.getUniqueId(), teamName);
             Bukkit.getServer().broadcastMessage(ChatColor.GREEN + playerName + " joined team " + teamName);
 
-            // Fixed string comparison: Use .equalsIgnoreCase
-            if (teamName.equalsIgnoreCase("Red")) {
-                String command = "tab player " + player.getName() + " tabprefix &cRed ✦ ";
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                String command2 = "namecolor red " + player.getName();
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command2);
-            } else if (teamName.equalsIgnoreCase("Blue")) {
-                String command = "tab player " + player.getName() + " tabprefix &9Blue ✦ ";
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                String command2 = "namecolor blue " + player.getName();
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command2);
-            } else if (teamName.equalsIgnoreCase("Green")) {
-                String command = "tab player " + player.getName() + " tabprefix &aGreen ✦ ";
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                String command2 = "namecolor green " + player.getName();
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command2);
-            } else if (teamName.equalsIgnoreCase("Yellow")) {
-                String command = "tab player " + player.getName() + " tabprefix &eYellow ✦ ";
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                String command2 = "namecolor yellow " + player.getName();
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command2);
-            }
+            // Use the configManager instance to get the prefix
+            String prefix = configManager.getTeamPrefix(teamName);
+            
+            // Execute the TAB command with the exact prefix
+            String command = "tab player " + player.getName() + " tabprefix " + prefix;
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
     }
     public TeamData getTeamData(String teamName) {

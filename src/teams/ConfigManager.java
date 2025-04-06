@@ -16,6 +16,7 @@ public class ConfigManager {
         this.plugin = plugin;
         loadConfig();
     }
+    
 
     private void loadConfig() {
         // No need to call saveDefaultConfig() here if you want to retain custom values in config.yml
@@ -57,24 +58,13 @@ public class ConfigManager {
         return chosenTeam;
     }
 
-    public String getTeamColor(String teamName) {
+    public String getTeamPrefix(String teamName) {
         FileConfiguration config = plugin.getConfig();
-        List<String> teamNames = config.getStringList("teams.names");
-        List<String> teamColors = config.getStringList("teams.colors");
-
-        plugin.getLogger().info("Finding color for team: " + teamName);
-        plugin.getLogger().info("Configured team names: " + teamNames);
-        plugin.getLogger().info("Configured team colors: " + teamColors);
-
-        int index = teamNames.indexOf(teamName);
-        if (index != -1 && index < teamColors.size()) {
-            String colorString = teamColors.get(index).toUpperCase().replace(" ", "_"); // Fix format
-            plugin.getLogger().info("Assigned color: " + colorString);
-            return colorString; // Return color as a string
-        } else {
-            plugin.getLogger().warning("Team name not found: " + teamName);
+        // Look for prefix in Teams.<teamName>.Prefix
+        if (config.contains("Teams." + teamName + ".Prefix")) {
+            return config.getString("Teams." + teamName + ".Prefix");
         }
-        return "WHITE"; // Default if no match is found
+        return "&f"; // Default white if not found
     }
 
     // Add a method to add teams dynamically if you need to do so programmatically

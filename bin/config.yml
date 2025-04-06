@@ -9,60 +9,60 @@ teams:
     - "Aqua"
     - "Pink"
     - "Orange"
-    - Dark_Blue
-    - Dark_Green
-    - Purple
-    - Gray
-    - Dark_Gray
-    - HeartRed
-    - HeartBlue
-    - HeartGreen
-    - HeartYellow
-    - HeartBlack
-    - HeartDark_Red
-    - HeartAqua
-    - HeartPink
-    - HeartOrange
-    - HeartDark_Blue
-    - HeartDark_Green
-    - Heart_Purple
-    - Heart_Gray
-    - HeartDark_Gray
-    - SpecialRed
-    - SpecialBlue
-    - SpecialGreen
-  colors:
-    - "RED"
-    - "GREEN"
-    - "BLUE"
-    - "YELLOW"
-    - "BLACK"
-    - "DARK_RED"
-    - "AQUA"
-    - "PINK"
-    - ORANGE
-    - DARK_BLUE
-    - DARK_GREEN
-    - PURPLE
-    - GRAY
-    - DARK_GRAY
-    - HEARTRED
-    - HEARTBLUE
-    - HEARTGREEN
-    - HEARTYELLOW
-    - HEARTBLACK
-    - HEARTDARK_RED
-    - HEARTAQUA
-    - HEARTPINK
-    - HEARTORANGE
-    - HEARTDARK_BLUE
-    - HEARTDARK_GREEN
-    - HEART_PURPLE
-    - HEART_GRAY
-    - HEARTDARK_GRAY
-    - SPECIALRED
-    - SPECIALBLUE
-    - SPECIALGREEN
+    - "Dark_Blue"
+    - "Dark_Green"
+    - "Purple"
+    - "Gray"
+    - "Dark_Gray"
+    - "HeartRed"
+    - "HeartBlue"
+    - "HeartGreen"
+    - "HeartYellow"
+    - "HeartBlack"
+    - "HeartDark_Red"
+    - "HeartAqua"
+    - "HeartPink"
+    - "HeartOrange"
+    - "HeartDark_Blue"
+    - "HeartDark_Green"
+    - "HeartPurple"
+    - "HeartGray"
+    - "HeartDark_Gray"
+    - "SpecialRed"
+    - "SpecialBlue"
+    - "SpecialGreen"
+  prefixes:
+    - "&c "     # Red
+    - "&a "     # Green
+    - "&9 "     # Blue
+    - "&e "     # Yellow
+    - "&0 "     # Black
+    - "&4 "     # Dark_Red
+    - "&b "     # Aqua
+    - "&d "     # Pink
+    - "&6 "     # Orange
+    - "&1 "     # Dark_Blue
+    - "&2 "     # Dark_Green
+    - "&5 "     # Purple
+    - "&7 "     # Gray
+    - "&8 "     # Dark_Gray
+    - "&c♥ "   # HeartRed
+    - "&9♥ "   # HeartBlue
+    - "&a♥ "   # HeartGreen
+    - "&e♥ "   # HeartYellow
+    - "&0♥ "   # HeartBlack
+    - "&4♥ "   # HeartDark_Red
+    - "&b♥ "   # HeartAqua
+    - "&d♥ "   # HeartPink
+    - "&6♥ "   # HeartOrange
+    - "&1♥ "   # HeartDark_Blue
+    - "&2♥ "   # HeartDark_Green
+    - "&5♥ "   # HeartPurple
+    - "&7♥ "   # HeartGray
+    - "&8♥ "   # HeartDark_Gray
+    - "&c★ "   # SpecialRed
+    - "&9★ "   # SpecialBlue
+    - "&a★ "   # SpecialGreen
 drop_rates:
     APPLE: 0
     GOLDEN_APPLE: 0

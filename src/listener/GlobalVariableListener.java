@@ -67,7 +67,7 @@ public class GlobalVariableListener implements Listener {
                 continue;
             }
 
-            String teamColorString = configManager.getTeamColor(teamName);
+            String teamColorString = configManager.getTeamPrefix(teamName);
             teamManager.createTeam(teamName, teamColorString, teamSize);
             Bukkit.getServer().broadcastMessage(ChatColor.GREEN + "Created team: " + teamName + " with color: " + teamColorString);
         }

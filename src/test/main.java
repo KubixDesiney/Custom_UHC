@@ -45,7 +45,7 @@ public class main extends JavaPlugin{
 		int gamestatus = Gamestatus.getStatus();
 	    this.gameConfig = new gameconfig(this);
 	    gameConfig.goneFishinEnabled = getConfig().getBoolean("scenarios.gone_fishin", false);
-        this.teamManager = new UHCTeamManager(this);
+        this.teamManager = new UHCTeamManager(this, configManager);
         distanceTracker = new TeamDistanceTracker(teamManager, this);
         distanceTracker.startTracking();
 		if (gamestatus == 1) {
@@ -85,9 +85,9 @@ public class main extends JavaPlugin{
 		getCommand("mod").setExecutor(commandCenter);
 		getServer().getPluginManager().registerEvents(damageTracker, this);
 	    getServer().getPluginManager().registerEvents(new GlobalVariableListener(teamManager, configManager), this);
-	    getServer().getPluginManager().registerEvents(new TeamChatListener(new UHCTeamManager(this)), this);
+	    getServer().getPluginManager().registerEvents(new TeamChatListener(new UHCTeamManager(this,configManager)), this);
 		getServer().getPluginManager().registerEvents(new gameconfig(this), this);
-		getServer().getPluginManager().registerEvents(new events(new UHCTeamManager(this)), this);
+		getServer().getPluginManager().registerEvents(new events(new UHCTeamManager(this,configManager)), this);
 		getServer().getPluginManager().registerEvents(new ScoreboardHandler(this,teamManager), this);
 		getServer().getPluginManager().registerEvents(new GameStartListener(this, scoreBoard, gameConfig), this);
 		getServer().getConsoleSender().sendMessage(ChatColor.WHITE+"================");

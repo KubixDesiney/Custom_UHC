@@ -142,6 +142,10 @@ import decoration.ScoreboardHandler;
 	    	    if (gameconfig.getInstance().isSuperHeroesEnabled()) {
 	    	        assignSuperPower(event.getPlayer());
 	    	    }
+	    	} else {
+	            for (Player player : Bukkit.getOnlinePlayers()) {
+	                clearPlayerPowers(player);
+	            }
 	    	}
 	    	
 	    }
