@@ -2,6 +2,7 @@ package commands;
 
 import java.io.File;
 import gamemodes.gamemode;
+import teams.ConfigManager;
 import teams.UHCTeamManager;
 
 import java.io.FileInputStream;
@@ -33,7 +34,9 @@ public class CommandCenter implements CommandExecutor{
 	private Field maxPlayersField;
     private final UHCTeamManager teamManager;
     private final ScoreboardHandler scoreBoard;
-    public CommandCenter(UHCTeamManager teamManager,ScoreboardHandler scoreBoard) {
+    private final ConfigManager configManager;
+    public CommandCenter(UHCTeamManager teamManager,ScoreboardHandler scoreBoard,ConfigManager configManager) {
+        this.configManager = configManager;
         this.teamManager = teamManager;
         this.scoreBoard = scoreBoard;
     }
@@ -198,8 +201,9 @@ public class CommandCenter implements CommandExecutor{
 	        }
 	        try {
 	            int size = Integer.parseInt(args[3]);
-	            String teamcolor = args[2];
-	            teamManager.createTeam(teamName,teamcolor,size);
+	            // Get the prefix from config instead of using color argument
+	            String prefix = configManager.getTeamPrefix(teamName);
+	            teamManager.createTeam(teamName, prefix, size);
 	            player.sendMessage(ChatColor.GREEN + "Team " + teamName + " created successfully!");
 	        } catch (NumberFormatException e) {
 	            player.sendMessage(ChatColor.RED + "Size must be a number!");
@@ -212,8 +216,12 @@ public class CommandCenter implements CommandExecutor{
 	            return true;
 	        }
 	        teamName = args[1];
-	        teamManager.joinTeam(player, teamName);
-	        player.sendMessage(ChatColor.GREEN + "You have joined team " + teamName + "!");
+	        try {
+	            teamManager.joinTeam(player, teamName);
+	            player.sendMessage(ChatColor.GREEN + "You have joined team " + teamName + "!");
+	        } catch (Exception e) {
+	            player.sendMessage(ChatColor.RED + "Error joining team: " + e.getMessage());
+	        }
 	        break;
 
 	    case "leave":

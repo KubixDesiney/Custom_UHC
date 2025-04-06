@@ -60,9 +60,12 @@ public class ConfigManager {
 
     public String getTeamPrefix(String teamName) {
         FileConfiguration config = plugin.getConfig();
-        // Look for prefix in Teams.<teamName>.Prefix
-        if (config.contains("Teams." + teamName + ".Prefix")) {
-            return config.getString("Teams." + teamName + ".Prefix");
+        List<String> teamNames = config.getStringList("teams.names");
+        List<String> teamPrefixes = config.getStringList("teams.prefixes");
+        
+        int index = teamNames.indexOf(teamName);
+        if (index != -1 && index < teamPrefixes.size()) {
+            return teamPrefixes.get(index);
         }
         return "&f"; // Default white if not found
     }

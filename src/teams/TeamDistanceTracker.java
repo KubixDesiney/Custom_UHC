@@ -7,6 +7,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 import utilities.HotBarMessager;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -22,12 +24,9 @@ public class TeamDistanceTracker {
     }
 
     public void startTracking() {
-        // Cancel previous task if running
         if (taskId != -1) {
             Bukkit.getScheduler().cancelTask(taskId);
         }
-        
-        // Schedule new repeating task (20 ticks = 1 second)
         taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, this::updateAllPlayers, 0L, 20L);
     }
 
@@ -46,16 +45,13 @@ public class TeamDistanceTracker {
 
     private void updatePlayerHotbar(Player player) {
         try {
-            
-          
-            
             String teamName = teamManager.getPlayerTeam(player);
             if (teamName == null || teamName.isEmpty()) {
                 sendDebugMessage(player, ChatColor.RED + "No team!");
                 return;
             }
 
-            List<Player> teammates = UHCTeamManager.getPlayersInTeam(teamName);
+            List<Player> teammates = new ArrayList<>(UHCTeamManager.getPlayersInTeam(teamName));
             teammates.remove(player); // Remove self
 
             if (teammates.isEmpty()) {
@@ -63,31 +59,27 @@ public class TeamDistanceTracker {
                 return;
             }
 
-            // Find closest teammate
-            Player closest = null;
-            double minDistance = Double.MAX_VALUE;
-            
+            // Sort teammates by distance
+            teammates.sort(Comparator.comparingDouble(t -> t.getLocation().distance(player.getLocation())));
+
+            // Build message for all teammates
+            StringBuilder message = new StringBuilder();
             for (Player teammate : teammates) {
                 if (!teammate.isOnline()) continue;
                 
                 double distance = player.getLocation().distance(teammate.getLocation());
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    closest = teammate;
-                }
-            }
-
-            if (closest != null) {
-                Vector direction = closest.getLocation().toVector().subtract(player.getLocation().toVector());
+                Vector direction = teammate.getLocation().toVector().subtract(player.getLocation().toVector());
                 direction.normalize();
                 
-                String message = String.format("%s%s §7%.0fm §e%s",
-                    getHealthColor(closest),
-                    getShortName(closest.getName()),
-                    minDistance,
-                    getArrowDirection(player, direction));
-                
-                sendDebugMessage(player, message);
+                message.append(String.format("%s%s §7%.0fm §e%s ",
+                    getHealthColor(teammate),
+                    getShortName(teammate.getName()),
+                    distance,
+                    getArrowDirection(player, direction)));
+            }
+
+            if (message.length() > 0) {
+                sendDebugMessage(player, message.toString().trim());
             }
 
         } catch (Exception e) {
@@ -97,7 +89,6 @@ public class TeamDistanceTracker {
     }
 
     private void sendDebugMessage(Player player, String message) {
-        
         try {
             HotBarMessager.sendHotBarMessage(player, message);
         } catch (Exception e) {

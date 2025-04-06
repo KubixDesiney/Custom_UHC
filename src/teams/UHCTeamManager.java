@@ -112,12 +112,15 @@ public class UHCTeamManager {
             playerTeams.put(player.getUniqueId(), teamName);
             Bukkit.getServer().broadcastMessage(ChatColor.GREEN + playerName + " joined team " + teamName);
 
-            // Use the configManager instance to get the prefix
+            // Get the prefix from config
             String prefix = configManager.getTeamPrefix(teamName);
             
-            // Execute the TAB command with the exact prefix
-            String command = "tab player " + player.getName() + " tabprefix " + prefix;
+            // Execute TAB command with the prefix
+            String command = "tab player " + player.getName() + " tabprefix " + prefix+" ";
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+            
+            // Also set the team color in scoreboard
+            team.setPrefix(ChatColor.translateAlternateColorCodes('&', prefix));
         }
     }
     public TeamData getTeamData(String teamName) {

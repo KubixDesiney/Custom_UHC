@@ -32,6 +32,7 @@ public class main extends JavaPlugin{
     private TeamDistanceTracker distanceTracker;
     private TeamSelectionSystem teamSelectionSystem;
     private gameconfig gameConfig;
+    
 	private static main instance;
 	public gameconfig getGameConfig() {
 	    return this.gameConfig; // Assuming you store the config instance as a field
@@ -43,6 +44,7 @@ public class main extends JavaPlugin{
 	    this.saveDefaultConfig();
 	    this.reloadConfig();
 		int gamestatus = Gamestatus.getStatus();
+		this.configManager = new ConfigManager(this);
 	    this.gameConfig = new gameconfig(this);
 	    gameConfig.goneFishinEnabled = getConfig().getBoolean("scenarios.gone_fishin", false);
         this.teamManager = new UHCTeamManager(this, configManager);
@@ -62,9 +64,8 @@ public class main extends JavaPlugin{
 		
 		damageTracker = new DamageTracker();
         this.teamSelectionSystem = new TeamSelectionSystem(teamManager, this);
-		ConfigManager configManager = new ConfigManager(this);
 		ScoreboardHandler scoreBoard = new ScoreboardHandler(this,teamManager);
-		CommandCenter commandCenter = new CommandCenter(teamManager,scoreBoard);
+		CommandCenter commandCenter = new CommandCenter(teamManager, scoreBoard, configManager);
 	    // Clear all teams from the UHCTeamManager
 	    teamManager.clearAllTeams();
 
@@ -85,9 +86,9 @@ public class main extends JavaPlugin{
 		getCommand("mod").setExecutor(commandCenter);
 		getServer().getPluginManager().registerEvents(damageTracker, this);
 	    getServer().getPluginManager().registerEvents(new GlobalVariableListener(teamManager, configManager), this);
-	    getServer().getPluginManager().registerEvents(new TeamChatListener(new UHCTeamManager(this,configManager)), this);
+	    getServer().getPluginManager().registerEvents(new TeamChatListener(teamManager), this);
 		getServer().getPluginManager().registerEvents(new gameconfig(this), this);
-		getServer().getPluginManager().registerEvents(new events(new UHCTeamManager(this,configManager)), this);
+		getServer().getPluginManager().registerEvents(new events(teamManager), this);
 		getServer().getPluginManager().registerEvents(new ScoreboardHandler(this,teamManager), this);
 		getServer().getPluginManager().registerEvents(new GameStartListener(this, scoreBoard, gameConfig), this);
 		getServer().getConsoleSender().sendMessage(ChatColor.WHITE+"================");
