@@ -107,7 +107,7 @@ import decoration.ScoreboardHandler;
 	        
 	        world.setDifficulty(Difficulty.HARD);
 	        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule naturalRegeneration false");
-	        if (isGoneFishinEnabled) {
+	        if (gameconfig.getInstance().goneFishinEnabled){
 	            Bukkit.getLogger().info("Gone Fishin' scenario is enabled - giving rods");
 	            giveGoneFishinRods();
 	        }

@@ -70,7 +70,7 @@ public class TeamSelectionSystem implements Listener {
         Inventory menu = Bukkit.createInventory(null, 54, ChatColor.BLUE + "Select Team - Page " + (page + 1));
         setupMenuBorders(menu);
         
-        List<String> allTeams = UHCTeamManager.getAllTeams();
+        List<String> allTeams = teamManager.getAllTeams();
         int totalPages = (int) Math.ceil((double) allTeams.size() / TEAMS_PER_PAGE);
         
         // Add teams to current page
@@ -119,7 +119,7 @@ public class TeamSelectionSystem implements Listener {
         meta.setBaseColor(DyeColor.WHITE);
         meta.setDisplayName(ChatColor.WHITE + teamName);
         
-        List<Player> members = UHCTeamManager.getPlayersInTeam(teamName);
+        List<Player> members = teamManager.getPlayersInTeam(teamName);
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + "Team Members (" + members.size() + "/" + gameconfig.getTeamSize() + "):");
         lore.add(" ");
@@ -189,32 +189,16 @@ public class TeamSelectionSystem implements Listener {
             String teamName = ChatColor.stripColor(clicked.getItemMeta().getDisplayName());
             
             // Check if team exists (case-insensitive)
-            Optional<String> matchingTeam = UHCTeamManager.getAllTeams().stream()
+            Optional<String> matchingTeam = teamManager.getAllTeams().stream()
                 .filter(t -> t.equalsIgnoreCase(teamName))
                 .findFirst();
                 
             if (matchingTeam.isPresent()) {
                 String actualTeamName = matchingTeam.get();
                 
-                // Leave current team if in one
-                String currentTeam = teamManager.getPlayerTeam(player);
-                if (currentTeam != null) {
-                    teamManager.leaveTeam(player);
-                }
-                
-                // Check if team is full
-                if (UHCTeamManager.getPlayersInTeam(actualTeamName).size() >= gameconfig.getTeamSize()) {
-                    player.sendMessage(ChatColor.RED + "This team is already full!");
-                    return;
-                }
-                
-                // Join the new team
-                teamManager.joinTeam(player, actualTeamName);
-                player.sendMessage(ChatColor.GREEN + "Successfully joined team " + actualTeamName);
+                // Execute the team join command
+                player.performCommand("team join " + actualTeamName);
                 player.closeInventory();
-                
-                // Update the player's inventory
-                giveSelectionBanner(player);
             }
         }
     }
