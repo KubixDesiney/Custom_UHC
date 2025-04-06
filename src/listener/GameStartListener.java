@@ -18,11 +18,14 @@ import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
@@ -33,6 +36,7 @@ import com.connorlinfoot.titleapi.TitleAPI;
 import Rules.gameconfig;
 import events.GameStartEvent;
 import events.gameEndEvent;
+import gamemodes.Gamestatus;
 import teams.UHCTeamManager;
 import test.main;
 import decoration.ScoreboardHandler;
@@ -59,7 +63,35 @@ import decoration.ScoreboardHandler;
 	            Bukkit.getLogger().warning("World is null!");
 	            return;
 	        }
-
+	        if (gameconfig.getInstance().isCatEyesEnabled()) {
+	            // Apply night vision to all players
+	            for (Player player : Bukkit.getOnlinePlayers()) {
+	                player.addPotionEffect(new PotionEffect(
+	                    PotionEffectType.NIGHT_VISION, 
+	                    Integer.MAX_VALUE, // Infinite duration
+	                    0, // Amplifier 0 (normal strength)
+	                    false, // No particles
+	                    false // Not ambient
+	                ));
+	            }
+	        }
+	        if (gameconfig.getInstance().isDoubleHealthEnabled()) {
+	            // Apply to all online players
+	            for (Player player : Bukkit.getOnlinePlayers()) {
+	                // Set max health to 40 (double normal) and fill it
+	                player.setMaxHealth(40);
+	                player.setHealth(40);               
+	            }
+	        }
+	        if (gameconfig.getInstance().isMasterLevelEnabled()) {
+	            int xpAmount = config.getMasterLevelAmount();
+	            
+	            // Apply to all online players
+	            for (Player player : Bukkit.getOnlinePlayers()) {
+	                player.setLevel(xpAmount);
+	                player.setExp(0.99f); // Almost full XP bar
+	            }
+	        }
 	        
 	        world.setDifficulty(Difficulty.HARD);
 	        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule naturalRegeneration false");
@@ -71,6 +103,32 @@ import decoration.ScoreboardHandler;
 
 	        showHealthInTablist();
 	        teleportTeamsToRandomLocation();
+	    }
+	    @EventHandler
+	    public void onPlayerJoin(PlayerJoinEvent event) {
+	    	if (Gamestatus.getStatus() == 1) {
+	    		if (gameconfig.getInstance().isCatEyesEnabled()) {
+	    			event.getPlayer().addPotionEffect(new PotionEffect(
+	    					PotionEffectType.NIGHT_VISION, 
+	    					Integer.MAX_VALUE,
+	    					0,
+	    					false,
+	    					false
+	            ));
+	        }
+	    	    if (gameconfig.getInstance().isDoubleHealthEnabled()) {
+	    	        Player player = event.getPlayer();
+	    	        player.setMaxHealth(40);
+	    	        player.setHealth(40);
+	    	    }
+	    	    if (gameconfig.getInstance().isMasterLevelEnabled()) {
+	    	        Player player = event.getPlayer();
+	    	        int xpAmount = gameconfig.getInstance().getMasterLevelAmount();
+	    	        player.setLevel(xpAmount);
+	    	        player.setExp(0.99f);
+	    	    }
+	    	}
+	    	
 	    }
 	    private void giveStartingItemsToAllPlayers() {
 	        // Get the saved starting inventory from gameconfig

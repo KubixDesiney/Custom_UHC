@@ -149,7 +149,7 @@ public class gameconfig implements Listener {
         addItem1(scenariosMenu, 6, Material.EXPLOSIVE_MINECART, "§eGamemode selection", "§7Click to open the Gamemode menu.");
 
         // Line 3
-        addItem1(scenariosMenu, 18, Material.EXP_BOTTLE, "§eExperience Bottles");
+        addItem2(scenariosMenu, 18, createMasterLevelItem());
         addItem1(scenariosMenu, 19, Material.ANVIL, "§eAnvil");
         addItem1(scenariosMenu, 20, Material.BOOKSHELF, "§eLibrary");
         addItem1(scenariosMenu, 21, Material.ENCHANTMENT_TABLE, "§eEnchanting Table");
@@ -167,11 +167,11 @@ public class gameconfig implements Listener {
         addItem1(scenariosMenu, 31, Material.LADDER, "§eLadder");
         addItem1(scenariosMenu, 32, Material.WOOD, "§eWood");
         addItem1(scenariosMenu, 33, Material.CHEST, "§eChest");
-        addItem1(scenariosMenu, 34, Material.SEA_LANTERN, "§cCatEyes");
+        addItem2(scenariosMenu, 34, createCatEyesItem());
         addItem2(scenariosMenu, 35, createCutCleanItem());
 
         // Line 5
-        addItem(scenariosMenu, 36, Material.POTION, "§ePotion");
+        addItem2(scenariosMenu, 36, createDoubleHealthItem());
         addItem2(scenariosMenu, 37, createGoneFishinItem());
         addItem1(scenariosMenu, 38, Material.APPLE, "§eApple");
         addItem1(scenariosMenu, 39, Material.BOW, "§eBow");
@@ -209,6 +209,151 @@ public class gameconfig implements Listener {
         addItem1(scenariosMenu, 50, Material.PAPER, "§eNext Page");
 
         player.openInventory(scenariosMenu);
+    } 
+    private boolean masterLevelEnabled = false;
+    private int masterLevelAmount = 1000;
+    private static final int MAX_MASTER_LEVEL = 1000;
+    private ItemStack createMasterLevelItem() {
+        ItemStack xpBottle = new ItemStack(Material.EXP_BOTTLE);
+        ItemMeta meta = xpBottle.getItemMeta();
+        meta.setDisplayName("§6MASTERLEVEL");
+        
+        List<String> lore = new ArrayList<>();
+        lore.add("§7Category: §dEnchantment");
+        lore.add("");
+        lore.add("§6Features:");
+        lore.add("§7- Grants all players a massive XP boost");
+        lore.add("§7- Configurable starting level");
+        lore.add("");
+        lore.add("§eConfiguration: Level: §a" + masterLevelAmount);
+        lore.add("");
+        lore.add("§eStatus: " + (masterLevelEnabled ? "§aEnabled" : "§cDisabled"));
+        lore.add("");
+        lore.add("§7[i] §bEditable Scenario");
+        
+        meta.setLore(lore);
+        
+        if (masterLevelEnabled) {
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        
+        xpBottle.setItemMeta(meta);
+        return xpBottle;
+    }
+    private void openMasterLevelConfigMenu(Player player) {
+        Inventory menu = Bukkit.createInventory(null, 9, "§6MASTERLEVEL Configuration");
+        
+        // Current level display
+        ItemStack current = new ItemStack(Material.EXP_BOTTLE);
+        ItemMeta currentMeta = current.getItemMeta();
+        currentMeta.setDisplayName("§aCurrent Level: §e" + masterLevelAmount);
+        current.setItemMeta(currentMeta);
+        menu.setItem(4, current);
+        
+        // Decrease button (-100)
+        ItemStack decrease = new ItemStack(Material.REDSTONE);
+        ItemMeta decreaseMeta = decrease.getItemMeta();
+        decreaseMeta.setDisplayName("§cDecrease (-100)");
+        decrease.setItemMeta(decreaseMeta);
+        menu.setItem(0, decrease);
+        
+        // Increase button (+100)
+        ItemStack increase = new ItemStack(Material.EMERALD);
+        ItemMeta increaseMeta = increase.getItemMeta();
+        increaseMeta.setDisplayName("§aIncrease (+100)");
+        increase.setItemMeta(increaseMeta);
+        menu.setItem(8, increase);
+        
+        // Back button
+        ItemStack back = new ItemStack(Material.ARROW);
+        ItemMeta backMeta = back.getItemMeta();
+        backMeta.setDisplayName("§cBack to Scenarios");
+        back.setItemMeta(backMeta);
+        menu.setItem(1, back);
+        
+        player.openInventory(menu);
+    }
+    @EventHandler
+    public void onMasterLevelConfigClick(InventoryClickEvent event) {
+        if (!event.getView().getTitle().equals("§6MASTERLEVEL Configuration")) return;
+        event.setCancelled(true);
+        
+        Player player = (Player) event.getWhoClicked();
+        ItemStack clicked = event.getCurrentItem();
+        
+        if (clicked == null || clicked.getType() == Material.AIR) return;
+        
+        switch (clicked.getType()) {
+            case REDSTONE: // Decrease
+                masterLevelAmount = Math.max(0, masterLevelAmount - 100);
+                break;
+            case EMERALD: // Increase
+                masterLevelAmount = Math.min(MAX_MASTER_LEVEL, masterLevelAmount + 100);
+                break;
+            case ARROW: // Back
+                openScenariosMenu(player);
+                return;
+            default:
+                return;
+        }
+        
+        // Save new value
+        plugin.getConfig().set("scenarios.master_level.amount", masterLevelAmount);
+        plugin.saveConfig();
+        
+        // Update menu
+        openMasterLevelConfigMenu(player);
+    }
+    private boolean doubleHealthEnabled = false;
+    private ItemStack createDoubleHealthItem() {
+        ItemStack potion = new ItemStack(Material.POTION);
+        ItemMeta meta = potion.getItemMeta();
+        meta.setDisplayName("§cDoubleHealth");
+        
+        List<String> lore = new ArrayList<>();
+        lore.add("§7Category: §aSurvival");
+        lore.add("");
+        lore.add("§6Features:");
+        lore.add("§7- Doubles max health (20 → 40)");
+        lore.add("§7- Full heal on activation");
+        lore.add("");
+        lore.add("§eStatus: " + (doubleHealthEnabled ? "§aEnabled" : "§cDisabled"));
+        
+        meta.setLore(lore);
+        
+        if (doubleHealthEnabled) {
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        
+        potion.setItemMeta(meta);
+        return potion;
+    }
+    private boolean catEyesEnabled = false;
+    private ItemStack createCatEyesItem() {
+        ItemStack lantern = new ItemStack(Material.SEA_LANTERN);
+        ItemMeta meta = lantern.getItemMeta();
+        meta.setDisplayName("§cCatEyes");
+        
+        List<String> lore = new ArrayList<>();
+        lore.add("§7Category: §aSurvival");
+        lore.add("");
+        lore.add("§6Features:");
+        lore.add("§7- Permanent Night Vision effect");
+        lore.add("§7- No blindness in darkness");
+        lore.add("");
+        lore.add("§eStatus: " + (catEyesEnabled ? "§aEnabled" : "§cDisabled"));
+        
+        meta.setLore(lore);
+        
+        if (catEyesEnabled) {
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        
+        lantern.setItemMeta(meta);
+        return lantern;
     }
     private boolean noBreakEnabled = false;
  // 4. Add these new methods somewhere in the class
@@ -518,7 +663,52 @@ public class gameconfig implements Listener {
                     String status = noBreakEnabled ? "§aENABLED" : "§cDISABLED";
                     player.sendMessage("§eNoBreak scenario: " + status);
                     event.setCancelled(true);
+                } else if (item.getType() == Material.SEA_LANTERN && item.getItemMeta().getDisplayName().equals("§cCatEyes")) {
+                    catEyesEnabled = !catEyesEnabled;
+                    
+                    // Save to config
+                    plugin.getConfig().set("scenarios.cat_eyes", catEyesEnabled);
+                    plugin.saveConfig();
+                    
+                    // Update the menu
+                    event.getInventory().setItem(event.getSlot(), createCatEyesItem());
+                    
+                    String status = catEyesEnabled ? "§aENABLED" : "§cDISABLED";
+                    player.sendMessage("§eCatEyes scenario: " + status);
+                    event.setCancelled(true);
+                } else if (item.getType() == Material.POTION && item.getItemMeta().getDisplayName().equals("§cDoubleHealth")) {
+                    doubleHealthEnabled = !doubleHealthEnabled;
+                    
+                    // Save to config
+                    plugin.getConfig().set("scenarios.double_health", doubleHealthEnabled);
+                    plugin.saveConfig();
+                    
+                    // Update the menu
+                    event.getInventory().setItem(event.getSlot(), createDoubleHealthItem());
+                    
+                    String status = doubleHealthEnabled ? "§aENABLED" : "§cDISABLED";
+                    player.sendMessage("§eDoubleHealth scenario: " + status);
+                    event.setCancelled(true);
+                } else if (item.getType() == Material.EXP_BOTTLE && item.getItemMeta().getDisplayName().equals("§6MASTERLEVEL")) {
+                    if (event.getClick().isRightClick()) {
+                        openMasterLevelConfigMenu(player);
+                    } else {
+                        masterLevelEnabled = !masterLevelEnabled;
+                        
+                        // Save to config
+                        plugin.getConfig().set("scenarios.master_level.enabled", masterLevelEnabled);
+                        plugin.getConfig().set("scenarios.master_level.amount", masterLevelAmount);
+                        plugin.saveConfig();
+                        
+                        // Update the menu
+                        event.getInventory().setItem(event.getSlot(), createMasterLevelItem());
+                        
+                        String status = masterLevelEnabled ? "§aENABLED" : "§cDISABLED";
+                        player.sendMessage("§eMASTERLEVEL scenario: " + status);
+                    }
+                    event.setCancelled(true);
                 }
+
         }
 
         // Handle gamemode changes
@@ -534,6 +724,19 @@ public class gameconfig implements Listener {
                 openScenariosMenu(player);
             }
     }
+    }
+    public boolean isMasterLevelEnabled() {
+        return masterLevelEnabled;
+    }
+
+    public int getMasterLevelAmount() {
+        return masterLevelAmount;
+    }
+    public boolean isDoubleHealthEnabled() {
+        return doubleHealthEnabled;
+    }
+    public boolean isCatEyesEnabled() {
+        return catEyesEnabled;
     }
     public void onItemDrop(PlayerDropItemEvent event) {
         if (event.getPlayer().getOpenInventory().getTitle().contains("Game Configuration") || event.getPlayer().getOpenInventory().getTitle().contains("Scenarios") || event.getPlayer().getOpenInventory().getTitle().contains("Game Modes") || event.getPlayer().getOpenInventory().getTitle().contains("SwitchUHC menu")) {
