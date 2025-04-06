@@ -50,15 +50,19 @@ import teams.UHCTeamManager;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 
 public class gameconfig implements Listener {
     private static String gameName = "HOST";
     private static gameconfig instance;
     private TeamSelectionSystem teamSelectionSystem;
     private final Map<String, Integer> dropRates = new HashMap<>();
+    private final Set<UUID> playersInSetupMode = new HashSet<>();
 
     private final String MENU_TITLE = "Drop Rate Settings";
     private boolean isNetherAccessEnabled = true;
@@ -1265,8 +1269,9 @@ public class gameconfig implements Listener {
             player.getInventory().setArmorContents(startingArmor);
         }
 
-        // Switch to Creative Mode
+        // Switch to Creative Mode and add to setup mode tracking
         player.setGameMode(GameMode.CREATIVE);
+        playersInSetupMode.add(player.getUniqueId());
         player.sendMessage(ChatColor.GREEN + "§aYou are now editing starting items!");
         player.sendMessage(ChatColor.GREEN + "§aModify your inventory and type §e/finish §awhen done.");
     }
@@ -1307,14 +1312,14 @@ public class gameconfig implements Listener {
     }
     @EventHandler
     public void onBlockBreak1(BlockBreakEvent event) {
-        if (event.getPlayer().getGameMode() == GameMode.CREATIVE) {
+        if (playersInSetupMode.contains(event.getPlayer().getUniqueId())) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
-        if (event.getPlayer().getGameMode() == GameMode.CREATIVE) {
+        if (playersInSetupMode.contains(event.getPlayer().getUniqueId())) {
             event.setCancelled(true);
         }
     }
@@ -1349,6 +1354,7 @@ public class gameconfig implements Listener {
                 }
 
                 player.setGameMode(GameMode.SURVIVAL);
+                playersInSetupMode.remove(player.getUniqueId()); // Remove from setup mode
                 player.sendMessage(ChatColor.GREEN + "§aStarting items saved!");
             }
             event.setCancelled(true);

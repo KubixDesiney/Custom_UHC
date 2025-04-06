@@ -37,6 +37,12 @@ public class events implements Listener {
     public events(UHCTeamManager teamManager) {
     	this.teamManager = teamManager;
     }
+    @EventHandler
+    public void onDamage(EntityDamageEvent event) {
+        if (Gamestatus.getStatus() != 1 && event.getEntity() instanceof Player) {
+            event.setCancelled(true);
+        }
+    }
 	@EventHandler
 	public static void onPlayerJoin(PlayerJoinEvent event) {
 		Player player = event.getPlayer();
@@ -45,7 +51,11 @@ public class events implements Listener {
 		int gamestatus = Gamestatus.getStatus();
         if (!player.isOp()) {
         	if (gamestatus == 0) {
+                Location spawn = new Location(Bukkit.getWorld("world"), 0, 150, 0);
+                player.teleport(spawn);
         		player.getInventory().clear();
+        		player.setGameMode(GameMode.ADVENTURE);
+        		player.setFallDistance(0);
         }
         }
 	    Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();

@@ -52,6 +52,7 @@ public class main extends JavaPlugin{
 			
 
 		} else {
+			
 			World world = Bukkit.getWorld("world");
 			world.setPVP(false);
 	        world.setGameRuleValue("doWeatherCycle", "false");  
