@@ -202,7 +202,7 @@ public class gameconfig implements Listener {
         addItem1(scenariosMenu, 41, Material.BREAD, "§eBread");
         addItem1(scenariosMenu, 42, Material.IRON_SWORD, "§eIron Sword");
         addItem1(scenariosMenu, 43, Material.COOKIE, "§eCookie");
-        addItem1(scenariosMenu, 44, Material.NETHER_STAR, "§eNether Star");
+        addItem2(scenariosMenu, 44, createSuperHeroesItem());
 
         // Navigation
         addItem1(scenariosMenu, 49, Material.ARROW, "§cReturn to Main Menu");
@@ -210,6 +210,31 @@ public class gameconfig implements Listener {
 
         player.openInventory(scenariosMenu);
     } 
+    private boolean superHeroesEnabled = false;
+    private ItemStack createSuperHeroesItem() {
+        ItemStack star = new ItemStack(Material.NETHER_STAR);
+        ItemMeta meta = star.getItemMeta();
+        meta.setDisplayName("§dSuperHeroes");
+        
+        List<String> lore = new ArrayList<>();
+        lore.add("§7Category: §5Other");
+        lore.add("");
+        lore.add("§6Features:");
+        lore.add("§7- Grants each player random super powers");
+        lore.add("§7- Various powerful effect combinations");
+        lore.add("");
+        lore.add("§eStatus: " + (superHeroesEnabled ? "§aEnabled" : "§cDisabled"));
+        
+        meta.setLore(lore);
+        
+        if (superHeroesEnabled) {
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        
+        star.setItemMeta(meta);
+        return star;
+    }
     private boolean masterLevelEnabled = false;
     private int masterLevelAmount = 1000;
     private static final int MAX_MASTER_LEVEL = 1000;
@@ -707,6 +732,19 @@ public class gameconfig implements Listener {
                         player.sendMessage("§eMASTERLEVEL scenario: " + status);
                     }
                     event.setCancelled(true);
+                } else if (item.getType() == Material.NETHER_STAR && item.getItemMeta().getDisplayName().equals("§dSuperHeroes")) {
+                    superHeroesEnabled = !superHeroesEnabled;
+                    
+                    // Save to config
+                    plugin.getConfig().set("scenarios.super_heroes", superHeroesEnabled);
+                    plugin.saveConfig();
+                    
+                    // Update the menu
+                    event.getInventory().setItem(event.getSlot(), createSuperHeroesItem());
+                    
+                    String status = superHeroesEnabled ? "§aENABLED" : "§cDISABLED";
+                    player.sendMessage("§eSuperHeroes scenario: " + status);
+                    event.setCancelled(true);
                 }
 
         }
@@ -724,6 +762,9 @@ public class gameconfig implements Listener {
                 openScenariosMenu(player);
             }
     }
+    }
+    public boolean isSuperHeroesEnabled() {
+        return superHeroesEnabled;
     }
     public boolean isMasterLevelEnabled() {
         return masterLevelEnabled;

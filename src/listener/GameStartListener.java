@@ -2,7 +2,12 @@ package listener;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
@@ -45,6 +50,7 @@ import decoration.ScoreboardHandler;
 	public class GameStartListener implements Listener {
 	    private final JavaPlugin plugin;
 	    private final gameconfig config;
+	    private final Map<UUID, Integer> playerPowers = new HashMap<>(); 
 
 	    public GameStartListener(JavaPlugin plugin, ScoreboardHandler scoreboardHandler,gameconfig config) {
 	        this.config = config;
@@ -92,6 +98,12 @@ import decoration.ScoreboardHandler;
 	                player.setExp(0.99f); // Almost full XP bar
 	            }
 	        }
+	        if (gameconfig.getInstance().isSuperHeroesEnabled()) {
+	            playerPowers.clear(); // Reset for new game
+	            for (Player player : Bukkit.getOnlinePlayers()) {
+	                assignSuperPower(player);
+	            }
+	        }
 	        
 	        world.setDifficulty(Difficulty.HARD);
 	        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "gamerule naturalRegeneration false");
@@ -127,8 +139,64 @@ import decoration.ScoreboardHandler;
 	    	        player.setLevel(xpAmount);
 	    	        player.setExp(0.99f);
 	    	    }
+	    	    if (gameconfig.getInstance().isSuperHeroesEnabled()) {
+	    	        assignSuperPower(event.getPlayer());
+	    	    }
 	    	}
 	    	
+	    }
+	    private void assignSuperPower(Player player) {
+	        // Only assign if they don't already have a power
+	        if (!playerPowers.containsKey(player.getUniqueId())) {
+	            int power = new Random().nextInt(5);
+	            playerPowers.put(player.getUniqueId(), power);
+	            applyPower(player, power);
+	        } else {
+	            // Reapply their original power
+	            applyPower(player, playerPowers.get(player.getUniqueId()));
+	        }
+	    }
+	    private void applyPower(Player player, int power) {
+	        // Clear existing effects first
+	        clearPlayerPowers(player);
+	        
+	        switch (power) {
+	            case 0: // Speed + Haste
+	                player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+	                player.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING, Integer.MAX_VALUE, 1));
+	                player.sendMessage("§b⚡ Your SuperHero Power: Speed II + Haste II");
+	                break;
+	                
+	            case 1: // Strength
+	                player.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, 0));
+	                player.sendMessage("§c💪 Your SuperHero Power: Strength I");
+	                break;
+	                
+	            case 2: // Resistance
+	                player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 0));
+	                player.sendMessage("§a🛡️ Your SuperHero Power: Resistance I");
+	                break;
+	                
+	            case 3: // Double Health
+	                player.setMaxHealth(40);
+	                player.setHealth(40);
+	                player.sendMessage("§4❤️ Your SuperHero Power: Double Health (40 HP)");
+	                break;
+	                
+	            case 4: // Jump Boost + Haste
+	                player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 2));
+	                player.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING, Integer.MAX_VALUE, 1));
+	                player.sendMessage("§e🐇 Your SuperHero Power: Jump Boost III + Haste II");
+	                break;
+	        }
+	    }
+	    private void clearPlayerPowers(Player player) {
+	        for (PotionEffect effect : player.getActivePotionEffects()) {
+	            player.removePotionEffect(effect.getType());
+	        }
+	        if (player.getMaxHealth() > 20) {
+	            player.resetMaxHealth();
+	        }
 	    }
 	    private void giveStartingItemsToAllPlayers() {
 	        // Get the saved starting inventory from gameconfig
