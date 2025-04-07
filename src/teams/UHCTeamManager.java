@@ -199,7 +199,7 @@ public class UHCTeamManager {
         String name;
         public String color;
         int maxSize;
-        Team scoreboardTeam;
+        public Team scoreboardTeam;
 
         public TeamData(String name, String color, int maxSize, Team scoreboardTeam) {
             this.name = name;
