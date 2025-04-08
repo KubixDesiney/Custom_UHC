@@ -136,9 +136,6 @@ public class events implements Listener {
 		    // Store the location to track it
 		    lightningLocations.add(location);
 		    
-		    // Spawn the lightning strike
-		    LightningStrike lightning = location.getWorld().strikeLightningEffect(location);
-		    
 		    // Schedule a task to remove the location after a short delay
 		    new BukkitRunnable() {
 		        @Override

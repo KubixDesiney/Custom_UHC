@@ -5,6 +5,7 @@ import test.main;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.DyeColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -14,6 +15,7 @@ import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -21,6 +23,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
@@ -31,6 +34,7 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -67,11 +71,12 @@ public class gameconfig implements Listener {
     private final Set<UUID> playersInSetupMode = new HashSet<>();
 
     private final String MENU_TITLE = "Drop Rate Settings";
-    private boolean isNetherAccessEnabled = true;
+    private boolean isNetherAccessEnabled = false;
     private World mainWorld = Bukkit.getWorld("world");
     private final Random random = new Random();
     private final Map<Location, Long> lastDropTimes = new HashMap<>();
     private final Map<Location, Integer> treeDropCounts = new HashMap<>();
+    private final Set<Location> activePortals = new HashSet<>();
     private static final long DROP_COOLDOWN_MS = 5000;
     public static double borderSpeed = 1.0; // Default speed is 1 block per second
     public static double finalBorderSize = 100.0; // Set the final border size (you can modify this dynamically)
@@ -133,7 +138,7 @@ public class gameconfig implements Listener {
         addItem(menu, 5, Material.WATCH, "§eBorder Speed", "§7Control the §aborder speed.", "", "§e➢ §7Status: §a"+borderSpeed+" §ablocs/sec", "", "§6§l➢ §eClick to adjust");
         addItem(menu, 6, Material.BARRIER, "§eBorder Start Time", "§7Control the time before the border shrinks.", "", "§e➢ §7Time: §e"+formatTime(meetupTime), "", "§6§l➢ §eClick to proceed");
         addItem(menu, 7, Material.DIAMOND_SWORD, "§ePvP Time", "§7Set the time before §aPvP §7is enabled.", "", "§e➢ §7Time: §e"+formatTime(pvpTime), "", "§6§l➢ §eClick to proceed");
-        addItem(menu, 8, Material.NETHERRACK, "§eNether Access", "§7Toggle §aNether access.", "", "§e➢ §7Status: ", "", "§6§l➢ §eClick to change");
+        addItem(menu, 8, Material.NETHERRACK, "§eNether Access", "§7Toggle §aNether access.", "", "§e➢ §7Status: " + (isNetherAccessEnabled ? "§aEnabled" : "§cDisabled"), "", "§6§l➢ §eClick to change");
         addItem(menu, 9, Material.APPLE, "§eDrops Configuration", "§7Adjust item drop rates.", "", "§6§l➢ §eClick to change");
         addItem(menu, 10, Material.PAPER, "§eGame Rules", "§7Modify game rules like §aiPvP §7and §aFriendlyFire.", "", "§6§l➢ §eClick to proceed");
         addItem(menu, 11, Material.BREWING_STAND_ITEM, "§ePotions Configuration", "§7Manage the §acreation §7of certain potions and their §bupgrades.", "", 
@@ -153,6 +158,28 @@ public class gameconfig implements Listener {
         addItem(menu, 31, Material.EMERALD_BLOCK, "§2§l⮚ §a§lLet's go! §2§l⮘", "§7Start the game with selected settings!");
 
         player.openInventory(menu);
+    }
+    @EventHandler
+    public void onPortalCreate(BlockIgniteEvent event) {
+        if (!isNetherAccessEnabled && 
+            event.getBlock().getType() == Material.OBSIDIAN && 
+            event.getCause() == BlockIgniteEvent.IgniteCause.FLINT_AND_STEEL) {
+            event.setCancelled(true);
+            event.getPlayer().sendMessage(ChatColor.RED + "Nether access is disabled!");
+        }
+    }
+    private void toggleNetherAccess(Player player) {
+        isNetherAccessEnabled = !isNetherAccessEnabled;
+        plugin.getConfig().set("nether_access", isNetherAccessEnabled);
+        plugin.saveConfig();
+        
+        String status = isNetherAccessEnabled ? "§aENABLED" : "§cDISABLED";
+        player.sendMessage("§eNether access: " + status);
+        
+        // If disabling, teleport players back from Nether
+        if (!isNetherAccessEnabled) {
+            teleportPlayersInNether();
+        }
     }
     private boolean cutCleanEnabled = false;
     public void openScenariosMenu(Player player) {
@@ -1461,6 +1488,19 @@ public class gameconfig implements Listener {
             	openFinalBorderSizeMenu(player);
             } else if (event.getSlot() == 12) { // Starting Items slot
                 openStartingItemsViewer(player);
+            } else if (event.getSlot() == 8) { // Nether Access slot
+                isNetherAccessEnabled = !isNetherAccessEnabled;
+                plugin.getConfig().set("nether_access", isNetherAccessEnabled);
+                plugin.saveConfig();
+                
+                if (!isNetherAccessEnabled) {
+                    closeExistingPortals();
+                    teleportPlayersInNether();
+                }
+                
+                player.sendMessage(ChatColor.YELLOW + "Nether access: " + 
+                    (isNetherAccessEnabled ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED"));
+                openMenu(player);
             }
         }
     }
@@ -1933,40 +1973,78 @@ public class gameconfig implements Listener {
          Bukkit.broadcastMessage("§cNether access has been disabled as meetup time has reached 0.");
      }
      @EventHandler
-     public void onPortalUse(PlayerInteractEvent event) {
-         Player player = event.getPlayer();
-         player.getInventory().getItemInHand();
-         
-         // Check if Nether access is disabled
-         if (!isNetherAccessEnabled) {
-             if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getClickedBlock().getType() == Material.PORTAL) {
-                 event.setCancelled(true);  // Cancel the portal interaction (prevent entry into the Nether)
-                 player.sendMessage("§cNether access has been disabled.");
-             }
+     public void onPortalUse(PlayerPortalEvent event) {
+         if (!isNetherAccessEnabled && 
+             event.getCause() == PlayerPortalEvent.TeleportCause.NETHER_PORTAL) {
+             event.setCancelled(true);
+             event.getPlayer().sendMessage(ChatColor.RED + "Nether access is disabled!");
          }
      }
+     @EventHandler
+     public void onPlayerInteract1(PlayerInteractEvent event) {
+         if (!isNetherAccessEnabled && 
+             event.getAction() == Action.RIGHT_CLICK_BLOCK && 
+             event.getClickedBlock().getType() == Material.OBSIDIAN && 
+             event.getItem() != null && 
+             event.getItem().getType() == Material.FLINT_AND_STEEL) {
+             event.setCancelled(true);
+             event.getPlayer().sendMessage(ChatColor.RED + "Nether access is disabled!");
+         }
+     }
+     public void closeExistingPortals() {
+    	    for (World world : Bukkit.getWorlds()) {
+    	        for (Chunk chunk : world.getLoadedChunks()) {
+    	            for (BlockState blockState : chunk.getTileEntities()) {
+    	                if (blockState.getBlock().getType() == Material.PORTAL) {
+    	                    blockState.getBlock().setType(Material.AIR);
+    	                }
+    	            }
+    	        }
+    	    }
+    	    activePortals.clear();
+    	}
+
 
      // Teleport players in the Nether to the main world within the border
      private void teleportPlayersInNether() {
-         for (Player player : Bukkit.getOnlinePlayers()) {
-             if (player.getWorld().getName().equals("world_nether")) {
-                 // Get the player’s location in the Nether
-                 Location netherLocation = player.getLocation();
-                 
-                 // Teleport to a safe location within the border in the main world
-                 Location worldSpawn = mainWorld.getSpawnLocation();
-                 // Ensure the player is within the world border
-                 WorldBorder border = mainWorld.getWorldBorder();
-                 double x = Math.max(Math.min(netherLocation.getX(), border.getCenter().getX() + border.getSize() / 2), border.getCenter().getX() - border.getSize() / 2);
-                 double z = Math.max(Math.min(netherLocation.getZ(), border.getCenter().getZ() + border.getSize() / 2), border.getCenter().getZ() - border.getSize() / 2);
-                 Location safeLocation = new Location(mainWorld, x, worldSpawn.getY(), z);
-                 
-                 // Teleport the player
-                 player.teleport(safeLocation);
-                 player.sendMessage("§aYou have been teleported back to the main world as the Nether is disabled.");
-             }
-         }
-     }
+    	    World netherWorld = Bukkit.getWorld("world_nether");
+    	    if (netherWorld == null) return;
+    	    
+    	    for (Player player : netherWorld.getPlayers()) {
+    	        Location safeLocation = findSafeLocation(mainWorld);
+    	        player.teleport(safeLocation);
+    	        player.sendMessage("§aYou have been teleported back to the main world as the Nether is disabled.");
+    	    }
+    	    
+    	    // Close all nether portals in the main world
+    	    closeAllPortals(mainWorld);
+    	}
+
+    	private Location findSafeLocation(World world) {
+    	    WorldBorder border = world.getWorldBorder();
+    	    Location spawn = world.getSpawnLocation();
+    	    
+    	    // Ensure the location is within the border
+    	    double x = Math.max(Math.min(spawn.getX(), border.getCenter().getX() + border.getSize()/2), 
+    	                      border.getCenter().getX() - border.getSize()/2);
+    	    double z = Math.max(Math.min(spawn.getZ(), border.getCenter().getZ() + border.getSize()/2), 
+    	                      border.getCenter().getZ() - border.getSize()/2);
+    	    
+    	    // Find the highest block at this location
+    	    int y = world.getHighestBlockYAt((int)x, (int)z) + 1;
+    	    
+    	    return new Location(world, x, y, z);
+    	}
+    	private void closeAllPortals(World world) {
+    	    for (Chunk chunk : world.getLoadedChunks()) {
+    	        for (BlockState blockState : chunk.getTileEntities()) {
+    	            // In 1.12.2, we check for portal blocks directly
+    	            if (blockState.getBlock().getType() == Material.PORTAL) {
+    	                blockState.getBlock().setType(Material.AIR);
+    	            }
+    	        }
+    	    }
+    	}
      public boolean getBorderVerif() {
     	    return borderShrinking;
     	}
@@ -2067,7 +2145,7 @@ public class gameconfig implements Listener {
 	                Bukkit.broadcastMessage("§7§l➤§e§lInfo: §r§7Players can kill each other now. (ely tal9ah 9odemk nikou) ");
 	                Bukkit.broadcastMessage(" ");
 	                Bukkit.broadcastMessage(" ");
-	                Bukkit.broadcastMessage("§7§o⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⯯⯯⯯");
+	                Bukkit.broadcastMessage("§7§o⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯");
 	                world.setPVP(true); // Enable PvP
 	                cancel();
 	            }

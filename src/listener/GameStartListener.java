@@ -3,9 +3,11 @@ package listener;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -23,6 +25,7 @@ import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -51,6 +54,7 @@ import decoration.ScoreboardHandler;
 	    private final JavaPlugin plugin;
 	    private final gameconfig config;
 	    private final Map<UUID, Integer> playerPowers = new HashMap<>(); 
+	    private final Set<UUID> jumpBoostPlayers = new HashSet<>();
 
 	    public GameStartListener(JavaPlugin plugin, ScoreboardHandler scoreboardHandler,gameconfig config) {
 	        this.config = config;
@@ -188,18 +192,30 @@ import decoration.ScoreboardHandler;
 	                break;
 	                
 	            case 4: // Jump Boost + Haste
-	                player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 2));
+	                player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 3)); // Jump Boost IV (amplifier 3)
 	                player.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING, Integer.MAX_VALUE, 1));
-	                player.sendMessage("§e🐇 Your SuperHero Power: Jump Boost III + Haste II");
+	                player.sendMessage("§e🐇 Your SuperHero Power: Jump Boost IV + Haste II");
+	                jumpBoostPlayers.add(player.getUniqueId()); // Track this player
 	                break;
 	        }
 	    }
 	    private void clearPlayerPowers(Player player) {
 	        for (PotionEffect effect : player.getActivePotionEffects()) {
+	        	jumpBoostPlayers.remove(player.getUniqueId());
 	            player.removePotionEffect(effect.getType());
 	        }
 	        if (player.getMaxHealth() > 20) {
 	            player.resetMaxHealth();
+	        }
+	    }
+	    @EventHandler
+	    public void onPlayerDamage(EntityDamageEvent event) {
+	        if (event.getEntity() instanceof Player && 
+	            event.getCause() == EntityDamageEvent.DamageCause.FALL) {
+	            Player player = (Player) event.getEntity();
+	            if (jumpBoostPlayers.contains(player.getUniqueId())) {
+	                event.setCancelled(true);
+	            }
 	        }
 	    }
 	    private void giveStartingItemsToAllPlayers() {
