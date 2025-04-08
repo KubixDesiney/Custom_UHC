@@ -13,6 +13,7 @@ import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -21,6 +22,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.BrewEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -68,6 +70,9 @@ public class gameconfig implements Listener {
     private boolean isNetherAccessEnabled = true;
     private World mainWorld = Bukkit.getWorld("world");
     private final Random random = new Random();
+    private final Map<Location, Long> lastDropTimes = new HashMap<>();
+    private final Map<Location, Integer> treeDropCounts = new HashMap<>();
+    private static final long DROP_COOLDOWN_MS = 5000;
     public static double borderSpeed = 1.0; // Default speed is 1 block per second
     public static double finalBorderSize = 100.0; // Set the final border size (you can modify this dynamically)
     private boolean borderShrinking = false; // Track if the border should shrink
@@ -94,7 +99,6 @@ public class gameconfig implements Listener {
     private static int meetupTime=0;
     private static int Slot = Bukkit.getMaxPlayers();
     UHCTeamManager manager = ((main) Bukkit.getPluginManager().getPlugin("Custom_UHC")).getTeamManager();
-    private final Map<Integer, String> actions = new HashMap<>();
     private final main plugin; 
     public gameconfig(main plugin) {
     	instance=this;
@@ -102,7 +106,17 @@ public class gameconfig implements Listener {
         this.plugin = plugin;
         this.teamSelectionSystem = new TeamSelectionSystem(manager, plugin);
         for (String key : new String[]{"APPLE", "GOLDEN_APPLE", "FLINT", "FEATHER", "ARROW", "XP_BOTTLE", "ENDER_PEARL"}) {
-            dropRates.put(key, plugin.getConfig().getInt("drop_rates." + key, 0));
+            int defaultRate = switch(key) {
+                case "APPLE" -> 10;        // 10% chance (feels right for apples)
+                case "GOLDEN_APPLE" -> 3;  // 3% chance (rare but obtainable)
+                case "FLINT" -> 35;        // 35% chance
+                case "FEATHER" -> 1;       // +1 feather always
+                case "ARROW" -> 3;         // +3 arrows always
+                case "XP_BOTTLE" -> 30;    // 30% XP boost
+                case "ENDER_PEARL" -> 8;   // 8% chance
+                default -> 0;
+            };
+            dropRates.put(key, plugin.getConfig().getInt("drop_rates." + key, defaultRate));
         }
     }
 
@@ -2106,34 +2120,76 @@ public class gameconfig implements Listener {
     	switchTime = newSwitchTime;
     }
 
-@EventHandler
-public void onBlockBreak(BlockBreakEvent event) {
-    Material block = event.getBlock().getType();
+    public void onBlockBreak(BlockBreakEvent event) {
+        Material block = event.getBlock().getType();
 
-    // Apple drop from trees
-    if (block == Material.LEAVES || block == Material.LEAVES_2) {
-        int appleChance = gameconfig.getInstance().getDropRate("APPLE"); // Get rate from gameconfig
-        int goldenAppleChance = gameconfig.getInstance().getDropRate("GOLDEN_APPLE"); // Get golden apple drop rate
-        Bukkit.getLogger().info("Apple Drop Chance: " + appleChance);
-        Bukkit.getLogger().info("Golden Apple Drop Chance: " + goldenAppleChance);
-        if (random.nextInt(100) < goldenAppleChance) {
-            event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation(), new ItemStack(Material.GOLDEN_APPLE));
+        // Apple drop from trees (both manual breaking and natural decay)
+        if (event.getBlock().getType() == Material.LEAVES || event.getBlock().getType() == Material.LEAVES_2) {
+            handleLeafDrops(event.getBlock());
         }
-        if (random.nextInt(100) < appleChance) {
-            event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation(), new ItemStack(Material.APPLE));
-            Bukkit.getLogger().info("Apple drop chance: " + gameconfig.getInstance().getDropRate("APPLE"));
+
+        // Flint drop from gravel
+        if (block == Material.GRAVEL) {
+            int flintChance = getDropRate("FLINT");
+            if (random.nextInt(100) < flintChance) {
+                event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation(), new ItemStack(Material.FLINT));
+            }
         }
     }
-
-    // Flint drop from gravel
-    if (block == Material.GRAVEL) {
-        int flintChance = gameconfig.getInstance().getDropRate("FLINT");
-        if (random.nextInt(100) < flintChance) {
-            event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation(), new ItemStack(Material.FLINT));
-            Bukkit.getLogger().info("FLINT drop chance: " + gameconfig.getInstance().getDropRate("FLINT"));
+    private void handleLeafDrops(Block block) {
+        // Find the base log of the tree
+        Block treeBase = findTreeBase(block);
+        if (treeBase == null) return;
+        
+        // Use the tree base's location as the key
+        Location treeLocation = treeBase.getLocation();
+        
+        // Get or initialize drop count for this tree
+        int drops = treeDropCounts.getOrDefault(treeLocation, 0);
+        
+        // Golden apple check (max 1 per tree)
+        if (drops < 1 && random.nextInt(100) < getDropRate("GOLDEN_APPLE")) {
+            block.getWorld().dropItemNaturally(block.getLocation(), 
+                new ItemStack(Material.GOLDEN_APPLE));
+            treeDropCounts.put(treeLocation, drops + 1);
+            return;
+        }
+        
+        // Regular apple check (max 3 per tree)
+        if (drops < 3 && random.nextInt(100) < getDropRate("APPLE")) {
+            block.getWorld().dropItemNaturally(block.getLocation(), 
+                new ItemStack(Material.APPLE));
+            treeDropCounts.put(treeLocation, drops + 1);
         }
     }
-}
+    private boolean canDropFromTree(Block block) {
+        // Find the base of the tree (log block)
+        Block base = findTreeBase(block);
+        if (base == null) return true;
+        
+        Long lastDrop = lastDropTimes.get(base.getLocation());
+        if (lastDrop == null || System.currentTimeMillis() - lastDrop > DROP_COOLDOWN_MS) {
+            lastDropTimes.put(base.getLocation(), System.currentTimeMillis());
+            return true;
+        }
+        return false;
+    }
+    @EventHandler
+    public void onLeavesDecay(LeavesDecayEvent event) {
+        handleLeafDrops(event.getBlock());
+    }
+
+    private Block findTreeBase(Block leafBlock) {
+        // Search downward from the leaf to find the log
+        for (int y = leafBlock.getY(); y > 0; y--) {
+            Block current = leafBlock.getWorld().getBlockAt(leafBlock.getX(), y, leafBlock.getZ());
+            if (current.getType().toString().endsWith("_LOG")) {
+                return current; // Found the tree's log
+            }
+        }
+        return null; // No log found below this leaf
+    }
+
 
 @EventHandler
 public void onEntityDeath(EntityDeathEvent event) {
@@ -2186,12 +2242,9 @@ public void onBlockBreak2(BlockBreakEvent event) {
         int boostedXp = (int) (1 * (1 + (xpBoost / 100.0)));
         Material blockType = block.getType();
         
-        // Only handle specific blocks, don't cancel others
         if (blockType == Material.IRON_ORE || blockType == Material.GOLD_ORE) {
-            // Cancel the event only for these blocks
             event.setCancelled(true);
             
-            // Handle iron and gold ores
             if (blockType == Material.IRON_ORE) {
                 player.giveExp(boostedXp);
                 block.getWorld().dropItemNaturally(block.getLocation(), new ItemStack(Material.IRON_INGOT));
@@ -2200,14 +2253,49 @@ public void onBlockBreak2(BlockBreakEvent event) {
                 block.getWorld().dropItemNaturally(block.getLocation(), new ItemStack(Material.GOLD_INGOT));
             }
             
-            // Break the block manually
             block.setType(Material.AIR);
         }
-        // Let all other blocks break normally
+        // New: Coal ore to torches
+        else if (blockType == Material.COAL_ORE) {
+            event.setCancelled(true);
+            player.giveExp(boostedXp);
+            block.getWorld().dropItemNaturally(block.getLocation(), new ItemStack(Material.TORCH, 4)); // 4 torches per coal ore
+            block.setType(Material.AIR);
+        }
+        // New: Sugar cane to books
+        if (block.getType() == Material.SUGAR_CANE_BLOCK) {
+            event.setCancelled(true);
+            
+            // Count how many sugar canes are in this column
+            int caneCount = 1;
+            Block above = block.getRelative(BlockFace.UP);
+            while (above.getType() == Material.SUGAR_CANE_BLOCK) {
+                caneCount++;
+                above.setType(Material.AIR);
+                above = above.getRelative(BlockFace.UP);
+            }
+            
+            // Drop books equal to the number of canes broken
+            block.getWorld().dropItemNaturally(block.getLocation(), 
+                new ItemStack(Material.BOOK, caneCount));
+            block.setType(Material.AIR);
+            
+            return;
+        }
     }
 }
 
-
+private boolean shouldDrop(String itemType) {
+    int rate = dropRates.getOrDefault(itemType, 0);
+    
+    // For percentage-based drops (apples, flint, etc.)
+    if (rate > 100) {  // Rates stored as 100 = 1%
+        // Scale the random check appropriately
+        return random.nextInt(10000) < rate;
+    }
+    // For absolute counts (feathers, arrows)
+    return true; // The count is handled separately
+}
 
 @EventHandler
 public void onEntityDeath2(EntityDeathEvent event) {
@@ -2229,7 +2317,6 @@ public void onEntityDeath2(EntityDeathEvent event) {
             event.getDrops().clear();  // Remove all drops
             event.getEntity().getWorld().dropItemNaturally(event.getEntity().getLocation(), new ItemStack(Material.COOKED_MUTTON));
         }
-        // Add more animals if needed
     }
 }
 

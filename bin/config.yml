@@ -64,10 +64,10 @@ teams:
     - "&9★ "   # SpecialBlue
     - "&a★ "   # SpecialGreen
 drop_rates:
-    APPLE: 0
-    GOLDEN_APPLE: 0
-    FLINT: 0
-    FEATHER: 0
-    ARROW: 0
-    XP_BOTTLE: 0
-    ENDER_PEARL: 0
+    APPLE: 10
+    GOLDEN_APPLE: 3
+    FLINT: 35
+    FEATHER: 1
+    ARROW: 3
+    XP_BOTTLE: 30
+    ENDER_PEARL: 8
