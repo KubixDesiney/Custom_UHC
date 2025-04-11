@@ -176,6 +176,32 @@ public class UHCTeamManager {
             Bukkit.getServer().broadcastMessage(ChatColor.GREEN + "Team " + teamName + " has been removed as it is empty.");
         }
     }
+    public Set<String> getAliveTeams() {
+        Set<String> aliveTeams = new HashSet<>();
+        for (Map.Entry<UUID, String> entry : playerTeams.entrySet()) {
+            Player player = Bukkit.getPlayer(entry.getKey());
+            if (player != null && player.isOnline() && !player.isDead()) {
+                aliveTeams.add(entry.getValue());
+            }
+        }
+        return aliveTeams;
+    }
+
+    public int getAliveTeamCount() {
+        return getAliveTeams().size();
+    }
+
+    public boolean isTeamAlive(String teamName) {
+        for (Map.Entry<UUID, String> entry : playerTeams.entrySet()) {
+            if (entry.getValue().equals(teamName)) {
+                Player player = Bukkit.getPlayer(entry.getKey());
+                if (player != null && player.isOnline() && !player.isDead()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
     public void updateTeamSize(String teamName, int newSize) {
         TeamData teamData = teams.get(teamName);
         if (teamData != null) {

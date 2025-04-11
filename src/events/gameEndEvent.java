@@ -4,9 +4,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+import test.main;
+
 public class gameEndEvent extends Event {
 	
 	private static final HandlerList handlers = new HandlerList();
+	private final String winningTeam;
 	
 	Player p;
 	Player winner;
@@ -14,12 +17,14 @@ public class gameEndEvent extends Event {
 	int winner_number;
 	int top_number;
 	
-	public gameEndEvent(Player winner,Player topkiller,int winner_number,int top_number, Player p) {
-		this.p = p;
-		this.winner = winner;
-		this.topkiller = topkiller;
-		this.winner_number = winner_number;
-		this.top_number = top_number;
+	public gameEndEvent(Player winner, Player topKiller) {
+	    this.winner = winner;
+	    this.topkiller = topKiller;
+	    this.winningTeam = winner != null ? 
+	        main.getInstance().getTeamManager().getPlayerTeam(winner) : null;
+	}
+	public String getWinningTeam() {
+	    return winningTeam;
 	}
 	public Player getp() {
 		return p;

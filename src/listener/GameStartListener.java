@@ -67,6 +67,9 @@ import decoration.ScoreboardHandler;
                      .getGameConfig().goneFishinEnabled;
 	    	Bukkit.getLogger().info("[GAME START] Checking Gone Fishin': " + isGoneFishinEnabled);
 	        Bukkit.getLogger().info("GameStartEvent received!");
+	        UHCTeamManager teamManager = ((main) plugin).getTeamManager();
+	        Bukkit.getLogger().info("[GAME START] Teams alive: " + 
+	            teamManager.getAliveTeamCount());
 	        giveStartingItemsToAllPlayers();
 	        World world = Bukkit.getWorld("world");
 	        if (world == null) {

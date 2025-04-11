@@ -19,6 +19,7 @@ import listener.DamageTracker;
 import listener.GameStartListener;
 import listener.GlobalVariableListener;
 import listener.TeamChatListener;
+import listener.TeamEliminationListener;
 import teams.ConfigManager;
 import teams.TeamDistanceTracker;
 import teams.TeamSelectionSystem;
@@ -84,6 +85,10 @@ public class main extends JavaPlugin{
 		getCommand("enchant").setExecutor(commandCenter);
 		getCommand("team").setExecutor(commandCenter);
 		getCommand("mod").setExecutor(commandCenter);
+		getServer().getPluginManager().registerEvents(
+			    new TeamEliminationListener(teamManager, this), 
+			    this
+			);
 		getServer().getPluginManager().registerEvents(damageTracker, this);
 	    getServer().getPluginManager().registerEvents(new GlobalVariableListener(teamManager, configManager), this);
 	    getServer().getPluginManager().registerEvents(new TeamChatListener(teamManager), this);
