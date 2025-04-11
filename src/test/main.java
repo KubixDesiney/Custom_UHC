@@ -18,6 +18,7 @@ import gamemodes.SwitchUHC;
 import listener.DamageTracker;
 import listener.GameStartListener;
 import listener.GlobalVariableListener;
+import listener.SafeMinerListener;
 import listener.TeamChatListener;
 import listener.TeamEliminationListener;
 import teams.ConfigManager;
@@ -89,6 +90,10 @@ public class main extends JavaPlugin{
 			    new TeamEliminationListener(teamManager, this), 
 			    this
 			);
+	    getServer().getPluginManager().registerEvents(
+	            new SafeMinerListener(gameConfig, teamManager),
+	            this
+	        );
 		getServer().getPluginManager().registerEvents(damageTracker, this);
 	    getServer().getPluginManager().registerEvents(new GlobalVariableListener(teamManager, configManager), this);
 	    getServer().getPluginManager().registerEvents(new TeamChatListener(teamManager), this);

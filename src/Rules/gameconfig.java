@@ -168,19 +168,6 @@ public class gameconfig implements Listener {
             event.getPlayer().sendMessage(ChatColor.RED + "Nether access is disabled!");
         }
     }
-    private void toggleNetherAccess(Player player) {
-        isNetherAccessEnabled = !isNetherAccessEnabled;
-        plugin.getConfig().set("nether_access", isNetherAccessEnabled);
-        plugin.saveConfig();
-        
-        String status = isNetherAccessEnabled ? "§aENABLED" : "§cDISABLED";
-        player.sendMessage("§eNether access: " + status);
-        
-        // If disabling, teleport players back from Nether
-        if (!isNetherAccessEnabled) {
-            teleportPlayersInNether();
-        }
-    }
     private boolean cutCleanEnabled = false;
     public void openScenariosMenu(Player player) {
         Inventory scenariosMenu = Bukkit.createInventory(null, 54, ChatColor.GOLD + "Scenarios");
@@ -251,6 +238,65 @@ public class gameconfig implements Listener {
 
         player.openInventory(scenariosMenu);
     } 
+    public void openScenariosMenuPage2(Player player) {
+        Inventory scenariosMenu = Bukkit.createInventory(null, 54, ChatColor.GOLD + "Scenarios - Page 2");
+        
+        // Add glass panes around the border
+        ItemStack glassPane = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 7); // Gray glass
+        ItemMeta glassMeta = glassPane.getItemMeta();
+        glassMeta.setDisplayName(" ");
+        glassPane.setItemMeta(glassMeta);
+        
+        // Top and bottom rows
+        for (int i = 0; i < 9; i++) {
+            scenariosMenu.setItem(i, glassPane); // Top row
+            scenariosMenu.setItem(i + 45, glassPane); // Bottom row (45-53)
+        }
+        
+        // Left and right columns
+        for (int i = 9; i <= 36; i += 9) {
+            scenariosMenu.setItem(i, glassPane); // Left column
+            scenariosMenu.setItem(i + 8, glassPane); // Right column
+        }
+        
+        // Add SafeMiner in the second slot of the second line (slot 10)
+        addItem2(scenariosMenu, 10, createSafeMinerItem());
+        
+        // Add previous page button at slot 49
+        addItem1(scenariosMenu, 49, Material.PAPER, "§ePrevious Page");
+        
+        player.openInventory(scenariosMenu);
+    }
+    private boolean safeMinerEnabled = false;
+    private ItemStack createSafeMinerItem() {
+        ItemStack pickaxe = new ItemStack(Material.GOLD_PICKAXE);
+        ItemMeta meta = pickaxe.getItemMeta();
+        meta.setDisplayName("§eSafeMiner");
+        
+        List<String> lore = new ArrayList<>();
+        lore.add("§7Category: §aSurvival");
+        lore.add("");
+        lore.add("§6Features:");
+        lore.add("§7- Players revive if they die from natural causes");
+        lore.add("§7- Inventory and effects are preserved");
+        lore.add("");
+        lore.add("§eStatus: " + (safeMinerEnabled ? "§aEnabled" : "§cDisabled"));
+        
+        meta.setLore(lore);
+        
+        if (safeMinerEnabled) {
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        
+        pickaxe.setItemMeta(meta);
+        return pickaxe;
+    }
+
+    // Add this getter with your other scenario getters
+    public boolean isSafeMinerEnabled() {
+        return safeMinerEnabled;
+    }
     private boolean superHeroesEnabled = false;
     private ItemStack createSuperHeroesItem() {
         ItemStack star = new ItemStack(Material.NETHER_STAR);
@@ -682,6 +728,40 @@ public class gameconfig implements Listener {
         if (event.getView().getTitle().contains("Game Configuration") || event.getView().getTitle().contains("Scenarios") || event.getView().getTitle().contains("Game Modes") || event.getView().getTitle().contains("SwitchUHC menu") ) {
             event.setCancelled(true);
         }
+        if (event.getView().getTitle().contains("Scenarios - Page 1") && 
+                item.getType() == Material.PAPER && 
+                item.getItemMeta().getDisplayName().equals("§eNext Page")) {
+                openScenariosMenuPage2(player);
+                event.setCancelled(true);
+                return;
+            }
+            
+            if (event.getView().getTitle().contains("Scenarios - Page 2") && 
+                item.getType() == Material.PAPER && 
+                item.getItemMeta().getDisplayName().equals("§ePrevious Page")) {
+                openScenariosMenu(player);
+                event.setCancelled(true);
+                return;
+            }
+
+            // Handle SafeMiner toggle
+            if (event.getView().getTitle().contains("Scenarios - Page 2") && 
+                item.getType() == Material.GOLD_PICKAXE && 
+                item.getItemMeta().getDisplayName().equals("§eSafeMiner")) {
+                
+                safeMinerEnabled = !safeMinerEnabled;
+                
+                // Save to config
+                plugin.getConfig().set("scenarios.safe_miner", safeMinerEnabled);
+                plugin.saveConfig();
+                
+                // Update the menu item
+                event.getInventory().setItem(event.getSlot(), createSafeMinerItem());
+                
+                String status = safeMinerEnabled ? "§aENABLED" : "§cDISABLED";
+                player.sendMessage("§eSafeMiner scenario: " + status);
+                event.setCancelled(true);
+            }
 
         // Handle scenario clicks
         if (event.getView().getTitle().contains("Scenarios")) {

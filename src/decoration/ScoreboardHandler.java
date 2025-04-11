@@ -170,10 +170,15 @@ public class ScoreboardHandler implements Listener {
         if (arrowText.length() > 16) {
             arrowText = arrowText.substring(0, 16); // Truncate if it exceeds 16 characters
         }
+        int aliveTeams = teamManager.getAliveTeamCount();
+        int alivePlayers = 0;
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (!p.isDead()) alivePlayers++;
+        }
 
         // Update scoreboard with the new arrow and distance
         simpleScoreboard.add("§7--Players--", 16);
-        simpleScoreboard.add("§eTeams:§7 "+Gamestatus.getAlive()+ " §7(" + Bukkit.getOnlinePlayers().size() + "§7)", 15);
+        simpleScoreboard.add("§eTeams:§7 "+ aliveTeams + " §7(" + alivePlayers + "§7)", 15);
         simpleScoreboard.add("§7--Time--", 14);
         if (gamemode.getMode() == 2) {
         	simpleScoreboard.add("§eSwitch : §b"+ formattedSwitchTime, 12);

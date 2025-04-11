@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -156,7 +157,7 @@ import decoration.ScoreboardHandler;
 	    	}
 	    	
 	    }
-	    private void assignSuperPower(Player player) {
+	    void assignSuperPower(Player player) {
 	        // Only assign if they don't already have a power
 	        if (!playerPowers.containsKey(player.getUniqueId())) {
 	            int power = new Random().nextInt(5);
@@ -244,7 +245,7 @@ import decoration.ScoreboardHandler;
 	        }
 	    }
 
-	    private void giveGoneFishinRods() {
+	    void giveGoneFishinRods() {
 	        Bukkit.getLogger().info("[DEBUG] Attempting to give rods to " + Bukkit.getOnlinePlayers().size() + " players");
 	        
 	        for (Player player : Bukkit.getOnlinePlayers()) {
@@ -349,43 +350,61 @@ import decoration.ScoreboardHandler;
 
 	    @EventHandler
 	    public void onGameEnd(gameEndEvent e) {
-	        DamageTracker damageTracker = main.getInstance().getDamageTracker();
-	        Player topDamager = damageTracker.getTopDamager();
-	        double topDamage = (topDamager != null) ? damageTracker.getPlayerDamage(topDamager) : 0.0;
-	        Player winner = e.getWinner();
-	        Player topKiller = e.gettopkiller();
+	        try {
+	            DamageTracker damageTracker = main.getInstance().getDamageTracker();
+	            Player topDamager = (damageTracker != null) ? damageTracker.getTopDamager() : null;
+	            double topDamage = (topDamager != null) ? damageTracker.getPlayerDamage(topDamager) : 0.0;
+	            Player winner = e.getWinner();
+	            Player topKiller = e.gettopkiller();
 
-	        // Play EXP gain sound to all players
-	        for (Player player : Bukkit.getOnlinePlayers()) {
-	            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1.0f, 1.0f);
-	            TitleAPI.sendTitle(player,3,3,3,"§e§lGAME ENDED","§aThanks for playing !");
-	        }
-
-	        // Broadcast game results
-	        Bukkit.broadcastMessage("§e§l――――――――――――――――――――――――");
-	        Bukkit.broadcastMessage(" ");
-	        Bukkit.broadcastMessage("      §e§lGAME ENDED ");
-	        Bukkit.broadcastMessage(" ");
-	        Bukkit.broadcastMessage(" §7§l• §eWinner: " + winner.getName());
-	        Bukkit.broadcastMessage(" §7§l• §eTop Killer: " + topKiller.getName() + " §ewith §c§l" + e.gettopkiller() + " §ekills!");
-	        Bukkit.broadcastMessage(" §7§l• §eTop Damager: " + (topDamager != null ? topDamager.getName() : "None") 
-	                + " §ewith §c§l" + topDamage + " §edamage dealt!");
-	        Bukkit.broadcastMessage(" ");
-	        Bukkit.broadcastMessage("§e§l――――――――――――――――――――――――");
-	        Bukkit.broadcastMessage("§7You will be kicked out of the server in 30 seconds...");
-
-	        // Launch fireworks at winner's location
-	        launchFireworks(winner.getLocation(), 3);
-
-	        // Delay before kicking players
-	        new BukkitRunnable() {
-	            @Override
-	            public void run() {
-	                for (Player player : Bukkit.getOnlinePlayers()) {
-	                    player.kickPlayer("§eThanks for playing!");
+	            // Play EXP gain sound to all players
+	            Sound levelUpSound;
+	            try {
+	                levelUpSound = Sound.valueOf("ENTITY_PLAYER_LEVELUP"); // 1.12.2 sound
+	            } catch (IllegalArgumentException ex) {
+	                levelUpSound = Sound.valueOf("LEVEL_UP"); // Fallback for other versions
+	            }
+	            
+	            for (Player player : Bukkit.getOnlinePlayers()) {
+	                if (player != null) {
+	                    player.playSound(player.getLocation(), levelUpSound, 1.0f, 1.0f);
+	                    TitleAPI.sendTitle(player, 5, 5, 5, "§e§lGAME ENDED", "§aThanks for playing !");
 	                }
 	            }
-	        }.runTaskLater(main.getInstance(), 600L); // 600L = 30 seconds (20 ticks = 1 sec)
+
+	            // Broadcast game results - with null checks
+	            Bukkit.broadcastMessage("§e§l――――――――――――――――――――――――");
+	            Bukkit.broadcastMessage(" ");
+	            Bukkit.broadcastMessage("      §e§lGAME ENDED ");
+	            Bukkit.broadcastMessage(" ");
+	            Bukkit.broadcastMessage(" §7§l• §eWinner: " + (winner != null ? winner.getName() : "None"));
+	            Bukkit.broadcastMessage(" §7§l• §eTop Killer: " + (topKiller != null ? topKiller.getName() : "None") + 
+	                                  " §ewith §c§l" + (topKiller != null ? e.gettopkiller() : "0") + " §ekills!");
+	            Bukkit.broadcastMessage(" §7§l• §eTop Damager: " + (topDamager != null ? topDamager.getName() : "None") + 
+	                                  " §ewith §c§l" + topDamage + " §edamage dealt!");
+	            Bukkit.broadcastMessage(" ");
+	            Bukkit.broadcastMessage("§e§l――――――――――――――――――――――――");
+	            Bukkit.broadcastMessage("§7You will be kicked out of the server in 30 seconds...");
+
+	            // Launch fireworks at winner's location if exists
+	            if (winner != null) {
+	                launchFireworks(winner.getLocation(), 3);
+	            }
+
+	            // Delay before kicking players
+	            new BukkitRunnable() {
+	                @Override
+	                public void run() {
+	                    for (Player player : Bukkit.getOnlinePlayers()) {
+	                        if (player != null) {
+	                            player.kickPlayer("§eThanks for playing!");
+	                        }
+	                    }
+	                }
+	            }.runTaskLater(main.getInstance(), 600L); // 600L = 30 seconds (20 ticks = 1 sec)
+	        } catch (Exception ex) {
+	            Bukkit.getLogger().log(Level.SEVERE, "Error in game end handling", ex);
+	        }
 	    }
 
 	    private void launchFireworks(Location loc, int amount) {
