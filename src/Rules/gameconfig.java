@@ -170,7 +170,7 @@ public class gameconfig implements Listener {
     }
     private boolean cutCleanEnabled = false;
     public void openScenariosMenu(Player player) {
-        Inventory scenariosMenu = Bukkit.createInventory(null, 54, ChatColor.GOLD + "Scenarios");
+        Inventory scenariosMenu = Bukkit.createInventory(null, 54, ChatColor.GOLD + "Scenarios - Page 1");
 
         // Wagons
         addItem1(scenariosMenu, 2, Material.STORAGE_MINECART, "§eComing soon...");
