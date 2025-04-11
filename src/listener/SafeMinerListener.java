@@ -30,7 +30,7 @@ public class SafeMinerListener implements Listener {
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        if (gameconfig.getInstance().isSafeMinerEnabled()) return;
+        if (!gameconfig.getInstance().isSafeMinerEnabled()) return;
         if (Gamestatus.getStatus() != 1) return; // Only during game
         
         Player player = event.getEntity();
