@@ -15,47 +15,49 @@ import Rules.gameconfig;
 public class TeamEliminationListener implements Listener {
     private final UHCTeamManager teamManager;
     private final main plugin;
+    private final SafeMinerListener safeMinerListener;
 
-    public TeamEliminationListener(UHCTeamManager teamManager, main plugin) {
+    public TeamEliminationListener(UHCTeamManager teamManager, main plugin, SafeMinerListener safeMinerListener) {
         this.teamManager = teamManager;
         this.plugin = plugin;
+        this.safeMinerListener = safeMinerListener;
     }
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        checkForGameEnd();
+        checkForGameEnd(event.getEntity());
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        checkForGameEnd();
+        checkForGameEnd(event.getPlayer());
     }
 
-    private void checkForGameEnd() {
-        // Check if game is in progress
+    private void checkForGameEnd(Player affectedPlayer) {
         if (Gamestatus.getStatus() != 1) return;
 
         boolean isSoloMode = gameconfig.getTeamSize() == 1;
         int alivePlayers = 0;
         Player lastAlive = null;
 
-        // Count alive players - ignore those who died naturally if SafeMiner is enabled
         for (Player player : Bukkit.getOnlinePlayers()) {
-            if (!player.isDead() || 
-                (gameconfig.getInstance().isSafeMinerEnabled() && player.getKiller() == null)) {
+            // Skip players who are pending revive
+            if (safeMinerListener.isPendingRevive(player.getUniqueId())) {
+                continue;
+            }
+            
+            if (!player.isDead()) {
                 alivePlayers++;
                 lastAlive = player;
             }
         }
 
         if (isSoloMode) {
-            // Solo mode - end when only one player remains (not counting SafeMiner revives)
             if (alivePlayers <= 1) {
                 Player topKiller = plugin.getDamageTracker().getTopDamager();
                 Bukkit.getPluginManager().callEvent(new gameEndEvent(lastAlive, topKiller));
             }
         } else {
-            // Team mode - end when only one team remains
             int aliveTeams = teamManager.getAliveTeamCount();
             if (aliveTeams <= 1) {
                 String winningTeam = null;
@@ -63,11 +65,10 @@ public class TeamEliminationListener implements Listener {
                 
                 if (aliveTeams == 1) {
                     winningTeam = teamManager.getAliveTeams().iterator().next();
-                    // Find first alive player in winning team (including SafeMiner revived players)
                     for (Player player : Bukkit.getOnlinePlayers()) {
                         if (winningTeam.equals(teamManager.getPlayerTeam(player)) && 
-                            (!player.isDead() || 
-                             (gameconfig.getInstance().isSafeMinerEnabled() && player.getKiller() == null))) {
+                            !player.isDead() && 
+                            !safeMinerListener.isPendingRevive(player.getUniqueId())) {
                             winner = player;
                             break;
                         }

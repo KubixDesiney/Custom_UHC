@@ -68,6 +68,8 @@ public class main extends JavaPlugin{
         this.teamSelectionSystem = new TeamSelectionSystem(teamManager, this);
 		ScoreboardHandler scoreBoard = new ScoreboardHandler(this,teamManager);
 		CommandCenter commandCenter = new CommandCenter(teamManager, scoreBoard, configManager);
+		SafeMinerListener safeMinerListener = new SafeMinerListener(gameConfig, teamManager);
+		TeamEliminationListener teamEliminationListener = new TeamEliminationListener(teamManager, this, safeMinerListener);
 	    // Clear all teams from the UHCTeamManager
 	    teamManager.clearAllTeams();
 
@@ -86,14 +88,8 @@ public class main extends JavaPlugin{
 		getCommand("enchant").setExecutor(commandCenter);
 		getCommand("team").setExecutor(commandCenter);
 		getCommand("mod").setExecutor(commandCenter);
-		getServer().getPluginManager().registerEvents(
-			    new TeamEliminationListener(teamManager, this), 
-			    this
-			);
-	    getServer().getPluginManager().registerEvents(
-	            new SafeMinerListener(gameConfig, teamManager),
-	            this
-	        );
+		getServer().getPluginManager().registerEvents(safeMinerListener, this);
+		getServer().getPluginManager().registerEvents(teamEliminationListener, this);
 		getServer().getPluginManager().registerEvents(damageTracker, this);
 	    getServer().getPluginManager().registerEvents(new GlobalVariableListener(teamManager, configManager), this);
 	    getServer().getPluginManager().registerEvents(new TeamChatListener(teamManager), this);

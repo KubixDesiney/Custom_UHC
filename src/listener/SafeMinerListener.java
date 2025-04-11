@@ -10,6 +10,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import Rules.gameconfig;
 import gamemodes.Gamestatus;
@@ -17,11 +18,15 @@ import teams.UHCTeamManager;
 import test.main;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class SafeMinerListener implements Listener {
     private final gameconfig config;
     private final UHCTeamManager teamManager;
+    private final Map<UUID, Boolean> pendingRevives = new HashMap<>();
 
     public SafeMinerListener(gameconfig config, UHCTeamManager teamManager) {
         this.config = config;
@@ -30,14 +35,17 @@ public class SafeMinerListener implements Listener {
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        if (!gameconfig.getInstance().isSafeMinerEnabled()) return;
-        if (Gamestatus.getStatus() != 1) return; // Only during game
+        if (!config.isSafeMinerEnabled() || Gamestatus.getStatus() != 1) return;
         
         Player player = event.getEntity();
-        Player killer = player.getKiller();
         
-        // Only handle natural deaths (no killer)
-        if (killer != null) return;
+        // Skip if meetup has started or death was caused by another player
+        if (gameconfig.getMeetupTime() <= 0 || player.getKiller() != null) {
+            return;
+        }
+        
+        // Mark player as pending revive
+        pendingRevives.put(player.getUniqueId(), true);
         
         // Save player data
         Location deathLocation = player.getLocation();
@@ -46,16 +54,24 @@ public class SafeMinerListener implements Listener {
         List<PotionEffect> effects = new ArrayList<>(player.getActivePotionEffects());
         
         // Schedule revival
-        Bukkit.getScheduler().runTaskLater(main.getInstance(), () -> {
-            if (player.isOnline()) {
-                // Teleport back to death location
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline() || !pendingRevives.containsKey(player.getUniqueId())) {
+                    pendingRevives.remove(player.getUniqueId());
+                    return;
+                }
+                
+                // Properly revive player
+                player.spigot().respawn();
+                player.setGameMode(GameMode.SURVIVAL);
                 player.teleport(deathLocation);
                 
                 // Restore inventory
                 player.getInventory().setContents(inventory);
                 player.getInventory().setArmorContents(armor);
                 
-                // Restore health and food
+                // Restore stats
                 player.setHealth(20);
                 player.setFoodLevel(20);
                 player.setSaturation(20);
@@ -66,35 +82,42 @@ public class SafeMinerListener implements Listener {
                 }
                 
                 // Restore scenarios
-                if (config.isSuperHeroesEnabled()) {
-                    // Reapply super hero power if needed
-                    GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
-                    gameStartListener.assignSuperPower(player);
-                }
-                
-                if (config.isCatEyesEnabled()) {
-                    player.addPotionEffect(new PotionEffect(
-                        PotionEffectType.NIGHT_VISION, 
-                        Integer.MAX_VALUE, 
-                        0, 
-                        false, 
-                        false
-                    ));
-                }
-                
-                if (config.isGoneFishinEnabled()) {
-                    // Give back fishing rod if needed
-                    GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
-                    gameStartListener.giveGoneFishinRods();
-                }
+                restoreScenarios(player);
                 
                 player.sendMessage("§aYou have been revived by the SafeMiner scenario!");
+                pendingRevives.remove(player.getUniqueId());
             }
-        }, 20L); // 1 second delay
+        }.runTaskLater(main.getInstance(), 20L); // 1 second delay
         
         // Prevent death message and keep inventory
         event.setDeathMessage(null);
         event.setKeepInventory(true);
         event.getDrops().clear();
+    }
+    
+    public boolean isPendingRevive(UUID playerId) {
+        return pendingRevives.containsKey(playerId);
+    }
+    
+    private void restoreScenarios(Player player) {
+        if (config.isSuperHeroesEnabled()) {
+            GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
+            gameStartListener.assignSuperPower(player);
+        }
+        
+        if (config.isCatEyesEnabled()) {
+            player.addPotionEffect(new PotionEffect(
+                PotionEffectType.NIGHT_VISION, 
+                Integer.MAX_VALUE, 
+                0, 
+                false, 
+                false
+            ));
+        }
+        
+        if (config.isGoneFishinEnabled()) {
+            GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
+            gameStartListener.giveGoneFishinRods();
+        }
     }
 }
