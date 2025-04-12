@@ -106,6 +106,7 @@ public class gameconfig implements Listener {
     UHCTeamManager manager = ((main) Bukkit.getPluginManager().getPlugin("Custom_UHC")).getTeamManager();
     private final main plugin; 
     public gameconfig(main plugin) {
+    	spectatorModeEnabled = plugin.getConfig().getBoolean("spectator_mode", false);
     	instance=this;
     	this.switchUHC = new SwitchUHC(plugin.getTeamManager());
         this.plugin = plugin;
@@ -132,7 +133,12 @@ public class gameconfig implements Listener {
         addPlayerHead(menu,0,maxPlayers);
 
         addTeamConfigItem(menu,1);
-        addItem(menu, 2, Material.EYE_OF_ENDER, "§eSpectators Configuration", "§7Control §aaccess §7to spectators.", "", "§e➢ §7Status: ", "", "§6§l➢ §eClick to change");
+        addItem(menu, 2, Material.EYE_OF_ENDER, "§eSpectators Configuration", 
+        	    "§7Control §aaccess §7to spectators.", 
+        	    "", 
+        	    "§e➢ §7Status: " + (spectatorModeEnabled ? "§aEnabled" : "§cDisabled"), 
+        	    "", 
+        	    "§6§l➢ §eClick to toggle");
         addItem(menu, 3, Material.LAPIS_BLOCK, "§eInitial Border", "§7Set the §asize §7of the starting border.", "", "§e➢ §7Status: §a"+world.getWorldBorder().getSize()+" §7(+"+world.getWorldBorder().getSize()+"§7/-"+world.getWorldBorder().getSize(), " ", "§6§l➢ §eClick to proceed");
         addItem(menu, 4, Material.REDSTONE_BLOCK, "§eFinal Border", "§7Set the §asize §7of the final border.", "", "§e➢ §7Status: §a"+finalBorderSize+"§7(+"+finalBorderSize / 2+"§7/-"+finalBorderSize /2, "", "§6§l➢ §eClick to proceed");
         addItem(menu, 5, Material.WATCH, "§eBorder Speed", "§7Control the §aborder speed.", "", "§e➢ §7Status: §a"+borderSpeed+" §ablocs/sec", "", "§6§l➢ §eClick to adjust");
@@ -158,6 +164,13 @@ public class gameconfig implements Listener {
         addItem(menu, 31, Material.EMERALD_BLOCK, "§2§l⮚ §a§lLet's go! §2§l⮘", "§7Start the game with selected settings!");
 
         player.openInventory(menu);
+    }
+ // Add this with other boolean fields at the top of gameconfig.java
+    private boolean spectatorModeEnabled = false;
+
+    // Add getter method
+    public boolean isSpectatorModeEnabled() {
+        return spectatorModeEnabled;
     }
     @EventHandler
     public void onPortalCreate(BlockIgniteEvent event) {
@@ -1581,7 +1594,15 @@ public class gameconfig implements Listener {
                 player.sendMessage(ChatColor.YELLOW + "Nether access: " + 
                     (isNetherAccessEnabled ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED"));
                 openMenu(player);
+            } else if (event.getSlot() == 2) { // Spectator Configuration slot
+                spectatorModeEnabled = !spectatorModeEnabled;
+                plugin.getConfig().set("spectator_mode", spectatorModeEnabled);
+                plugin.saveConfig();
+                player.sendMessage(ChatColor.YELLOW + "Spectator mode: " + 
+                    (spectatorModeEnabled ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED"));
+                openMenu(player);
             }
+
         }
     }
     private static ItemStack[] startingInventory = new ItemStack[36]; // Main inventory (0-35)

@@ -71,3 +71,4 @@ drop_rates:
     ARROW: 3
     XP_BOTTLE: 30
     ENDER_PEARL: 8
+spectator_mode: false

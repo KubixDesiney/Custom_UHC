@@ -185,29 +185,6 @@ public class events implements Listener {
 		    }
 		}
 	
-	
-	@EventHandler
-	public static void onPlayerDeath (PlayerDeathEvent event) {
-		Player player =  event.getEntity();
-		boolean specvalue = spec.getspect();
-		int playersAlive = Gamestatus.getAlive();
-		playersAlive--;
-		Gamestatus.setAlive(playersAlive);
-		if(specvalue == false) {
-		    new BukkitRunnable() {
-	            @Override
-	            public void run() {
-	                if (player.isOnline()) {
-	                    player.kickPlayer("§eThanks for playing!");
-	                }
-	            }
-	        }.runTaskLater(main.getInstance(), 600L); 
-	    } else {
-	    	player.setGameMode(GameMode.SPECTATOR);
-	    }
-		
-			
-		} 
 		
 	}
 	

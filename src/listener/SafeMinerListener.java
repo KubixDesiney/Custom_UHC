@@ -1,6 +1,7 @@
 package listener;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -54,9 +55,18 @@ public class SafeMinerListener implements Listener {
         List<PotionEffect> effects = new ArrayList<>(player.getActivePotionEffects());
         
         // Schedule revival
-        new BukkitRunnable() {
+        if (gameconfig.getInstance().isSpectatorModeEnabled()) {
+            event.setDeathMessage(null);
+            event.setKeepInventory(false);
+            player.setGameMode(GameMode.SPECTATOR);
+            player.sendMessage(ChatColor.GRAY + "You are now spectating the match.");
+        } else {
+        	new BukkitRunnable() {
             @Override
             public void run() {
+                if (player.isOnline()) {
+                    player.kickPlayer(ChatColor.RED + "You died! Spectator mode is disabled.");
+                }
                 if (!player.isOnline() || !pendingRevives.containsKey(player.getUniqueId())) {
                     pendingRevives.remove(player.getUniqueId());
                     return;
@@ -70,9 +80,11 @@ public class SafeMinerListener implements Listener {
                 // Restore inventory
                 player.getInventory().setContents(inventory);
                 player.getInventory().setArmorContents(armor);
-                
-                // Restore stats
-                player.setHealth(20);
+                if (gameconfig.getInstance().isDoubleHealthEnabled()) {
+                player.setHealth(40);
+                } else {
+                	player.setHealth(20);
+                }
                 player.setFoodLevel(20);
                 player.setSaturation(20);
                 
@@ -94,13 +106,14 @@ public class SafeMinerListener implements Listener {
         event.setKeepInventory(true);
         event.getDrops().clear();
     }
+    }
     
     public boolean isPendingRevive(UUID playerId) {
         return pendingRevives.containsKey(playerId);
     }
     
     private void restoreScenarios(Player player) {
-        if (config.isSuperHeroesEnabled()) {
+        if (gameconfig.getInstance().isSuperHeroesEnabled()) {
             GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
             gameStartListener.assignSuperPower(player);
         }
@@ -115,7 +128,7 @@ public class SafeMinerListener implements Listener {
             ));
         }
         
-        if (config.isGoneFishinEnabled()) {
+        if (gameconfig.getInstance().isGoneFishinEnabled()) {
             GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
             gameStartListener.giveGoneFishinRods();
         }
