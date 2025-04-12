@@ -54,19 +54,10 @@ public class SafeMinerListener implements Listener {
         ItemStack[] armor = player.getInventory().getArmorContents();
         List<PotionEffect> effects = new ArrayList<>(player.getActivePotionEffects());
         
-        // Schedule revival
-        if (gameconfig.getInstance().isSpectatorModeEnabled()) {
-            event.setDeathMessage(null);
-            event.setKeepInventory(false);
-            player.setGameMode(GameMode.SPECTATOR);
-            player.sendMessage(ChatColor.GRAY + "You are now spectating the match.");
-        } else {
-        	new BukkitRunnable() {
+        // Schedule revival with a 2-second delay (40 ticks)
+        new BukkitRunnable() {
             @Override
             public void run() {
-                if (player.isOnline()) {
-                    player.kickPlayer(ChatColor.RED + "You died! Spectator mode is disabled.");
-                }
                 if (!player.isOnline() || !pendingRevives.containsKey(player.getUniqueId())) {
                     pendingRevives.remove(player.getUniqueId());
                     return;
@@ -75,37 +66,50 @@ public class SafeMinerListener implements Listener {
                 // Properly revive player
                 player.spigot().respawn();
                 player.setGameMode(GameMode.SURVIVAL);
-                player.teleport(deathLocation);
                 
-                // Restore inventory
-                player.getInventory().setContents(inventory);
-                player.getInventory().setArmorContents(armor);
-                if (gameconfig.getInstance().isDoubleHealthEnabled()) {
-                player.setHealth(40);
-                } else {
-                	player.setHealth(20);
-                }
-                player.setFoodLevel(20);
-                player.setSaturation(20);
-                
-                // Restore effects
-                for (PotionEffect effect : effects) {
-                    player.addPotionEffect(effect);
-                }
-                
-                // Restore scenarios
-                restoreScenarios(player);
-                
-                player.sendMessage("§aYou have been revived by the SafeMiner scenario!");
-                pendingRevives.remove(player.getUniqueId());
+                // Small delay before teleporting to avoid issues
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        player.teleport(deathLocation);
+                        
+                        // Restore inventory
+                        player.getInventory().setContents(inventory);
+                        player.getInventory().setArmorContents(armor);
+                        
+                        if (gameconfig.getInstance().isDoubleHealthEnabled()) {
+                            player.setHealth(40);
+                        } else {
+                            player.setHealth(20);
+                        }
+                        player.setFoodLevel(20);
+                        player.setSaturation(20);
+                        
+                        // Restore effects
+                        for (PotionEffect effect : effects) {
+                            player.addPotionEffect(effect);
+                        }
+                        
+                        // Restore scenarios
+                        restoreScenarios(player);
+                        
+                        player.sendMessage("§aYou have been revived by the SafeMiner scenario!");
+                        pendingRevives.remove(player.getUniqueId());
+                    }
+                }.runTaskLater(main.getInstance(), 5L);
             }
-        }.runTaskLater(main.getInstance(), 20L); // 1 second delay
+        }.runTaskLater(main.getInstance(), 40L); // 2 second delay
         
         // Prevent death message and keep inventory
         event.setDeathMessage(null);
         event.setKeepInventory(true);
         event.getDrops().clear();
-    }
+        
+        // Handle spectator mode if enabled
+        if (gameconfig.getInstance().isSpectatorModeEnabled()) {
+            player.setGameMode(GameMode.SPECTATOR);
+            player.sendMessage(ChatColor.GRAY + "You are now spectating the match.");
+        }
     }
     
     public boolean isPendingRevive(UUID playerId) {

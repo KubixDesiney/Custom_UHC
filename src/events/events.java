@@ -91,7 +91,7 @@ public class events implements Listener {
 	}
 	@EventHandler
 	public static void onPlayerQuit(PlayerQuitEvent event) {
-		event.setQuitMessage(" ");
+		event.setQuitMessage(null);
 		Player player = event.getPlayer();
 		for(Player all : Bukkit.getServer().getOnlinePlayers()) {
 			try {

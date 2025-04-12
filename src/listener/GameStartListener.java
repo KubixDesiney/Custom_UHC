@@ -350,7 +350,6 @@ import decoration.ScoreboardHandler;
 
 	    @EventHandler
 	    public void onGameEnd(gameEndEvent e) {
-	        try {
 	            DamageTracker damageTracker = main.getInstance().getDamageTracker();
 	            Player topDamager = (damageTracker != null) ? damageTracker.getTopDamager() : null;
 	            double topDamage = (topDamager != null) ? damageTracker.getPlayerDamage(topDamager) : 0.0;
@@ -390,22 +389,8 @@ import decoration.ScoreboardHandler;
 	            if (winner != null) {
 	                launchFireworks(winner.getLocation(), 3);
 	            }
-
-	            // Delay before kicking players
-	            new BukkitRunnable() {
-	                @Override
-	                public void run() {
-	                    for (Player player : Bukkit.getOnlinePlayers()) {
-	                        if (player != null) {
-	                            player.kickPlayer("§eThanks for playing!");
-	                        }
-	                    }
-	                }
-	            }.runTaskLater(main.getInstance(), 600L); // 600L = 30 seconds (20 ticks = 1 sec)
-	        } catch (Exception ex) {
-	            Bukkit.getLogger().log(Level.SEVERE, "Error in game end handling", ex);
 	        }
-	    }
+	    
 
 	    private void launchFireworks(Location loc, int amount) {
 	        World world = loc.getWorld();
