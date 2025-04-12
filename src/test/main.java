@@ -43,6 +43,8 @@ public class main extends JavaPlugin{
 	@Override
 	public void onEnable() {
 		
+		
+		
 	    this.saveDefaultConfig();
 	    this.reloadConfig();
 		int gamestatus = Gamestatus.getStatus();
