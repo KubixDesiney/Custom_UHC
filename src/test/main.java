@@ -72,12 +72,15 @@ public class main extends JavaPlugin{
 		CommandCenter commandCenter = new CommandCenter(teamManager, scoreBoard, configManager);
 		SafeMinerListener safeMinerListener = new SafeMinerListener(gameConfig, teamManager);
 		TeamEliminationListener teamEliminationListener = new TeamEliminationListener(teamManager, this, safeMinerListener);
+	    this.teamSelectionSystem = new TeamSelectionSystem(teamManager, this);
 	    // Clear all teams from the UHCTeamManager
 	    teamManager.clearAllTeams();
 
 	    // Clear all teams from the scoreboard
 	    teamManager.clearScoreboardTeams();
-
+	    Bukkit.getScheduler().scheduleSyncDelayedTask(this, () -> {
+	        teamSelectionSystem.updateAllPlayersBanners();
+	    }, 20L); // 1 second delay to ensure all players are loaded
 	    // You can also broadcast a message indicating all teams have been cleared
 	    Bukkit.getServer().broadcastMessage(ChatColor.RED + "All teams have been cleared at the start.");
 	    // Proceed with other startup logic if needed
@@ -131,6 +134,9 @@ public class main extends JavaPlugin{
 		getServer().getConsoleSender().sendMessage("Status:"+ ChatColor.RED+"Bye Bye");
 		getServer().getConsoleSender().sendMessage(" ");
 		getServer().getConsoleSender().sendMessage(ChatColor.WHITE+"================");
+	}
+	public TeamSelectionSystem getTeamSelectionSystem() {
+	    return teamSelectionSystem;
 	}
     public static main getInstance() {
         return instance;

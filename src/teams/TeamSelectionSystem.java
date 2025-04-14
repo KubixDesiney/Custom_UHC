@@ -16,16 +16,12 @@ import java.util.*;
 public class TeamSelectionSystem implements Listener {
     private final UHCTeamManager teamManager;
     private final JavaPlugin plugin;
-    private final NamespacedKey bannerKey;
-    private final NamespacedKey comparatorKey;
     private final Map<Player, Integer> teamSelectionPages = new HashMap<>();
     private static final int TEAMS_PER_PAGE = 28; // 7 rows * 4 columns (excluding borders)
 
     public TeamSelectionSystem(UHCTeamManager teamManager, JavaPlugin plugin) {
         this.teamManager = teamManager;
         this.plugin = plugin;
-        this.bannerKey = new NamespacedKey(plugin, "team_banner");
-        this.comparatorKey = new NamespacedKey(plugin, "config_comparator");
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
     public void updateAllPlayersBanners() {
@@ -41,10 +37,12 @@ public class TeamSelectionSystem implements Listener {
             // Create the banner
             ItemStack banner = createTeamSelectionBanner();
             
-            // Add persistent data to identify it
+            // Add special lore to identify it
             ItemMeta meta = banner.getItemMeta();
-            meta.getPersistentDataContainer().set(bannerKey, PersistentDataType.BYTE, (byte) 1);
-            meta.addItemFlags(ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_ATTRIBUTES);
+            List<String> lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
+            lore.add(ChatColor.DARK_PURPLE + "UHC_TEAM_BANNER");
+            meta.setLore(lore);
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             banner.setItemMeta(meta);
             
             // Add to appropriate slot (slot 0 for non-op, slot 1 for op)
@@ -61,6 +59,7 @@ public class TeamSelectionSystem implements Listener {
             giveConfigComparator(player);
         }
     }
+
     private void giveConfigComparator(Player player) {
         // Remove any existing comparators first
         removeConfigComparators(player);
@@ -68,13 +67,16 @@ public class TeamSelectionSystem implements Listener {
         ItemStack comparator = new ItemStack(Material.REDSTONE_COMPARATOR);
         ItemMeta meta = comparator.getItemMeta();
         meta.setDisplayName("§eGame Config");
-        meta.getPersistentDataContainer().set(comparatorKey, PersistentDataType.BYTE, (byte) 1);
-        meta.addItemFlags(ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_ATTRIBUTES);
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.DARK_PURPLE + "UHC_CONFIG_COMPARATOR");
+        meta.setLore(lore);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         comparator.setItemMeta(meta);
         
         // Always set to slot 0 for OPs
         player.getInventory().setItem(0, comparator);
     }
+
     private void removeTeamBanners(Player player) {
         for (int i = 0; i < player.getInventory().getSize(); i++) {
             ItemStack item = player.getInventory().getItem(i);
@@ -126,28 +128,17 @@ public class TeamSelectionSystem implements Listener {
             }
         }
     }
-    @EventHandler
-    public void onPlayerSwapHandItems(PlayerSwapHandItemsEvent event) {
-        if (isTeamBanner(event.getOffHandItem()) || isTeamBanner(event.getMainHandItem()) ||
-            isConfigComparator(event.getOffHandItem()) || isConfigComparator(event.getMainHandItem())) {
-            event.setCancelled(true);
-        }
-    }
-    
     private boolean isTeamBanner(ItemStack item) {
-        return item != null && 
-               item.getType() == Material.BANNER && 
-               item.hasItemMeta() && 
-               item.getItemMeta().getPersistentDataContainer().has(bannerKey, PersistentDataType.BYTE);
+        if (item == null || item.getType() != Material.BANNER || !item.hasItemMeta()) return false;
+        ItemMeta meta = item.getItemMeta();
+        return meta.hasLore() && meta.getLore().contains(ChatColor.DARK_PURPLE + "UHC_TEAM_BANNER");
     }
 
     private boolean isConfigComparator(ItemStack item) {
-        return item != null && 
-               item.getType() == Material.REDSTONE_COMPARATOR && 
-               item.hasItemMeta() && 
-               item.getItemMeta().getPersistentDataContainer().has(comparatorKey, PersistentDataType.BYTE);
+        if (item == null || item.getType() != Material.REDSTONE_COMPARATOR || !item.hasItemMeta()) return false;
+        ItemMeta meta = item.getItemMeta();
+        return meta.hasLore() && meta.getLore().contains(ChatColor.DARK_PURPLE + "UHC_CONFIG_COMPARATOR");
     }
-}
 
 
     private ItemStack createTeamSelectionBanner() {

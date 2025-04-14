@@ -1563,12 +1563,6 @@ public class gameconfig implements Listener {
         menu.setItem(slot, item);
     }    
     @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        // Let TeamSelectionSystem handle both banner and comparator
-        plugin.getTeamSelectionSystem().giveSelectionBanner(player);
-    }
-    @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         if (event.getItem() != null && event.getItem().hasItemMeta() && event.getItem().getItemMeta().getDisplayName().equals("§eGame Config")) {
