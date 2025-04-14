@@ -93,7 +93,7 @@ public class main extends JavaPlugin{
 		getServer().getPluginManager().registerEvents(safeMinerListener, this);
 		getServer().getPluginManager().registerEvents(teamEliminationListener, this);
 		getServer().getPluginManager().registerEvents(damageTracker, this);
-	    getServer().getPluginManager().registerEvents(new GlobalVariableListener(teamManager, configManager), this);
+	    getServer().getPluginManager().registerEvents(new GlobalVariableListener(teamManager, configManager,teamSelectionSystem), this);
 	    getServer().getPluginManager().registerEvents(new TeamChatListener(teamManager), this);
 		getServer().getPluginManager().registerEvents(new gameconfig(this), this);
 		getServer().getPluginManager().registerEvents(new events(teamManager), this);

@@ -28,11 +28,74 @@ public class TeamSelectionSystem implements Listener {
     public void giveSelectionBanner(Player player) {
         if (gameconfig.getTeamSize() > 1) {
             // Remove any existing team selection banners first
-            player.getInventory().remove(Material.BANNER);
-            // Add new banner to inventory
-            player.getInventory().addItem(createTeamSelectionBanner());
+            removeTeamBanners(player);
+            
+            // Create the banner
+            ItemStack banner = createTeamSelectionBanner();
+            
+            // Set banner to be unplaceable, undroppable, and unmovable
+            ItemMeta meta = banner.getItemMeta();
+            meta.addItemFlags(ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_ATTRIBUTES);
+            banner.setItemMeta(meta);
+            
+            // Add to appropriate slot (slot 0 for non-op, slot 1 for op)
+            int slot = player.isOp() ? 1 : 0;
+            
+            // Ensure the slot is empty or contains the banner (to avoid overwriting other items)
+            if (player.getInventory().getItem(slot) == null || 
+                (player.getInventory().getItem(slot).isSimilar(banner))) {
+                player.getInventory().setItem(slot, banner);
+            } else {
+                // Find first empty slot if preferred slot is occupied
+                player.getInventory().addItem(banner);
+            }
+        } else {
+            removeTeamBanners(player);
         }
     }
+    private void removeTeamBanners(Player player) {
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && item.getType() == Material.BANNER && 
+                item.hasItemMeta() && 
+                item.getItemMeta().getDisplayName().equals(ChatColor.GOLD + "Team Selection")) {
+                player.getInventory().remove(item);
+            }
+        }
+    }
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+        ItemStack dropped = event.getItemDrop().getItemStack();
+        if (isTeamBanner(dropped) || isConfigComparator(dropped)) {
+            event.setCancelled(true);
+            event.getPlayer().sendMessage(ChatColor.RED + "You cannot drop this item!");
+        }
+    }
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked != null && (isTeamBanner(clicked) || isConfigComparator(clicked))) {
+            // Prevent moving from its slot
+            if (event.getSlot() == (event.getWhoClicked().isOp() ? 1 : 0)) {
+                event.setCancelled(true);
+            }
+        }
+    }
+    private boolean isTeamBanner(ItemStack item) {
+        return item != null && 
+               item.getType() == Material.BANNER && 
+               item.hasItemMeta() && 
+               item.getItemMeta().getDisplayName().equals(ChatColor.GOLD + "Team Selection");
+    }
+
+    private boolean isConfigComparator(ItemStack item) {
+        return item != null && 
+               item.getType() == Material.REDSTONE_COMPARATOR && 
+               item.hasItemMeta() && 
+               item.getItemMeta().getDisplayName().equals("§eGame Config");
+    }
+
 
     private ItemStack createTeamSelectionBanner() {
         ItemStack banner = new ItemStack(Material.BANNER);

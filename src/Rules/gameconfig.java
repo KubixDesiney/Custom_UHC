@@ -1566,12 +1566,26 @@ public class gameconfig implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         teamSelectionSystem.giveSelectionBanner(player);
+        
         if (player.isOp()) {
+            // Remove any existing comparators first
+            player.getInventory().remove(Material.REDSTONE_COMPARATOR);
+            
+            // Create comparator
             ItemStack comparator = new ItemStack(Material.REDSTONE_COMPARATOR);
             ItemMeta meta = comparator.getItemMeta();
             meta.setDisplayName("§eGame Config");
+            meta.addItemFlags(ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_ATTRIBUTES);
             comparator.setItemMeta(meta);
-            player.getInventory().addItem(comparator);
+            
+            // Add to slot 1
+            if (player.getInventory().getItem(1) == null || 
+                player.getInventory().getItem(1).getType() == Material.REDSTONE_COMPARATOR) {
+                player.getInventory().setItem(1, comparator);
+            } else {
+                // Find first empty slot if slot 1 is occupied by something else
+                player.getInventory().addItem(comparator);
+            }
         }
     }
     @EventHandler

@@ -6,24 +6,32 @@ import Rules.gameconfig;
 import events.ServerSlotChangedEvent;
 import events.TeamSizeChangedEvent;
 import teams.ConfigManager;
+import teams.TeamSelectionSystem;
 import teams.UHCTeamManager;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
+
 import java.util.List;
 import java.util.Random;
 
 public class GlobalVariableListener implements Listener {
     private final UHCTeamManager teamManager;
     private final ConfigManager configManager;
+    private final TeamSelectionSystem teamSelectionSystem;
 
-    public GlobalVariableListener(UHCTeamManager teamManager, ConfigManager configManager) {
+    public GlobalVariableListener(UHCTeamManager teamManager, ConfigManager configManager, TeamSelectionSystem teamSelectionSystem) {
         this.teamManager = teamManager;
         this.configManager = configManager;
+        this.teamSelectionSystem = teamSelectionSystem;
     }
 
     @EventHandler
     public void onTeamSizeChanged(TeamSizeChangedEvent event) {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            teamSelectionSystem.giveSelectionBanner(player);
+        }
         int newTeamSize = event.getNewTeamSize();
         int serverSlot = Bukkit.getServer().getMaxPlayers();
         int idealTeamCount = (serverSlot + newTeamSize - 1) / newTeamSize;
