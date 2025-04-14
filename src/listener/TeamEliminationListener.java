@@ -1,6 +1,8 @@
 package listener;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -25,12 +27,52 @@ public class TeamEliminationListener implements Listener {
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        checkForGameEnd(event.getEntity());
+        Player player = event.getEntity();
+        handlePlayerDeath(player);
+        checkForGameEnd(player);
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         checkForGameEnd(event.getPlayer());
+    }
+
+    private void handlePlayerDeath(Player player) {
+        // Skip if game isn't running or player is pending revive
+        if (Gamestatus.getStatus() != 1 || safeMinerListener.isPendingRevive(player.getUniqueId())) {
+            return;
+        }
+
+        // Handle spectator mode
+        if (gameconfig.getInstance().isSpectatorModeEnabled()) {
+            // Put player in spectator mode
+            player.setGameMode(GameMode.SPECTATOR);
+            player.sendMessage(ChatColor.GRAY + "You are now spectating the match.");
+            
+            // Check if team was eliminated
+            checkTeamElimination(player);
+        } else {
+            // Kick non-op players after 30 seconds
+            if (!player.isOp()) {
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (player.isOnline()) {
+                        player.kickPlayer(ChatColor.RED + "You have been eliminated from the UHC!");
+                    }
+                }, 30 * 20L); // 30 seconds
+            }
+            // Put player in spectator mode temporarily
+            player.setGameMode(GameMode.SPECTATOR);
+            
+            // Check if team was eliminated
+            checkTeamElimination(player);
+        }
+    }
+
+    private void checkTeamElimination(Player player) {
+        String teamName = teamManager.getPlayerTeam(player);
+        if (teamName != null && !teamManager.isTeamAlive(teamName)) {
+            Bukkit.broadcastMessage(ChatColor.RED + "Team " + teamName + " has been eliminated!");
+        }
     }
 
     private void checkForGameEnd(Player affectedPlayer) {
@@ -46,7 +88,7 @@ public class TeamEliminationListener implements Listener {
                 continue;
             }
             
-            if (!player.isDead()) {
+            if (!player.isDead() && player.getGameMode() != GameMode.SPECTATOR) {
                 alivePlayers++;
                 lastAlive = player;
             }
@@ -68,6 +110,7 @@ public class TeamEliminationListener implements Listener {
                     for (Player player : Bukkit.getOnlinePlayers()) {
                         if (winningTeam.equals(teamManager.getPlayerTeam(player)) && 
                             !player.isDead() && 
+                            player.getGameMode() != GameMode.SPECTATOR &&
                             !safeMinerListener.isPendingRevive(player.getUniqueId())) {
                             winner = player;
                             break;

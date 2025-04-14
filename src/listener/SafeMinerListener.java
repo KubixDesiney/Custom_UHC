@@ -104,12 +104,6 @@ public class SafeMinerListener implements Listener {
         event.setDeathMessage(null);
         event.setKeepInventory(true);
         event.getDrops().clear();
-        
-        // Handle spectator mode if enabled
-        if (gameconfig.getInstance().isSpectatorModeEnabled()) {
-            player.setGameMode(GameMode.SPECTATOR);
-            player.sendMessage(ChatColor.GRAY + "You are now spectating the match.");
-        }
     }
     
     public boolean isPendingRevive(UUID playerId) {

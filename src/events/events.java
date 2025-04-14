@@ -102,7 +102,7 @@ public class events implements Listener {
 		}
 	}
 	  @EventHandler
-	  public void onPlayerDeath1(PlayerDeathEvent event) {
+	  public void onPlayerDeath(PlayerDeathEvent event) {
 	      // Check if the entity is a player
 	      if (event.getEntity() instanceof Player) {
 	          Player player = (Player) event.getEntity();

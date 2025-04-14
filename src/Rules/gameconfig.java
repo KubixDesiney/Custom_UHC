@@ -79,7 +79,6 @@ public class gameconfig implements Listener {
     private static final double VANILLA_GOLDEN_RATE = 0.001;   // 0.1%
     private final Random random = new Random();
     private final Set<Location> activePortals = new HashSet<>();
-    private static final long DROP_COOLDOWN_MS = 5000;
     public static double borderSpeed = 1.0; // Default speed is 1 block per second
     public static double finalBorderSize = 100.0; // Set the final border size (you can modify this dynamically)
     private boolean borderShrinking = false; // Track if the border should shrink
@@ -114,14 +113,13 @@ public class gameconfig implements Listener {
         this.plugin = plugin;
         this.teamSelectionSystem = new TeamSelectionSystem(manager, plugin);
      // In the constructor, replace the drop rates initialization with:
-        dropRates.put("APPLE", 0);
-        dropRates.put("GOLDEN_APPLE", 0);
-        dropRates.put("FLINT", 50);        // 50% from gravel
-        dropRates.put("FEATHER", 2);       // +2 feathers always (from chickens)
-        dropRates.put("ARROW", 5);         // +5 arrows always (from skeletons)
-        dropRates.put("XP_BOTTLE", 50);    // 50% XP boost
-        dropRates.put("ENDER_PEARL", 15);  // 15% chance (from endermen)
-
+        dropRates.put("APPLE", 0);        // 0% bonus (vanilla rate)
+        dropRates.put("GOLDEN_APPLE", 0); // 0% bonus (vanilla rate)
+        dropRates.put("FLINT", 0);        // 0% (vanilla flint rate)
+        dropRates.put("FEATHER", 0);      // 0 extra feathers
+        dropRates.put("ARROW", 0);        // 0 extra arrows
+        dropRates.put("XP_BOTTLE", 0);    // 0% XP boost
+        dropRates.put("ENDER_PEARL", 0);  // 0% bonus
     }
 
 
@@ -1090,22 +1088,22 @@ public class gameconfig implements Listener {
     	    Inventory menu = Bukkit.createInventory(null, 18, MENU_TITLE);
     	    
     	    menu.setItem(0, createItem(Material.APPLE, "§eApple Drop Rate: §a" + dropRates.get("APPLE") + "%", 
-    	        "§7Current chance to drop from leaves", 
-    	        "",
-    	        "§6Left-Click: +10%",
-    	        "§6Right-Click: -10%"));
-    	    
-    	    menu.setItem(1, createItem(Material.GOLDEN_APPLE, "§6Golden Apple Rate: §a" + dropRates.get("GOLDEN_APPLE") + "%", 
-    	        "§7Current chance to drop from leaves",
-    	        "",
-    	        "§6Left-Click: +5%",
-    	        "§6Right-Click: -5%"));
-    	    
-    	    menu.setItem(2, createItem(Material.FLINT, "§7Flint Drop Rate: §a" + dropRates.get("FLINT") + "%", 
-    	        "§7Current chance to drop from gravel",
-    	        "",
-    	        "§6Left-Click: +15%",
-    	        "§6Right-Click: -15%"));
+    	            "§7Current chance multiplier for natural decay",
+    	            "",
+    	            "§6Left-Click: +25%",
+    	            "§6Right-Click: -25%"));
+    	        
+    	        menu.setItem(1, createItem(Material.GOLDEN_APPLE, "§6Golden Apple Rate: §a" + dropRates.get("GOLDEN_APPLE") + "%", 
+    	            "§7Current chance multiplier for natural decay",
+    	            "",
+    	            "§6Left-Click: +25%",
+    	            "§6Right-Click: -25%"));
+    	        
+    	        menu.setItem(2, createItem(Material.FLINT, "§7Flint Drop Rate: §a" + dropRates.get("FLINT") + "%", 
+    	            "§7Chance to drop from gravel",
+    	            "",
+    	            "§6Left-Click: +25%",
+    	            "§6Right-Click: -25%"));
     	    
     	    menu.setItem(3, createItem(Material.FEATHER, "§fFeather Drop: §a" + dropRates.get("FEATHER"), 
     	        "§7Additional feathers from chickens",
@@ -1158,9 +1156,9 @@ public class gameconfig implements Listener {
     	    if (clickedItem == null) return;
 
     	    switch (clickedItem) {
-    	        case APPLE -> updateDropRate(player, clickedItem, event, 10, 100);
-    	        case GOLDEN_APPLE -> updateDropRate(player, clickedItem, event, 5, 100);
-    	        case FLINT -> updateDropRate(player, clickedItem, event, 15, 100);
+    	        case APPLE -> updateDropRate(player, clickedItem, event, 25, 1000); // Max 1000% (10x vanilla)
+    	        case GOLDEN_APPLE -> updateDropRate(player, clickedItem, event, 25, 1000);
+    	        case FLINT -> updateDropRate(player, clickedItem, event, 25, 100);
     	        case FEATHER -> updateDropRate(player, clickedItem, event, 1, 10);
     	        case ARROW -> updateDropRate(player, clickedItem, event, 1, 10);
     	        case EXP_BOTTLE -> updateDropRate(player, clickedItem, event, 10, 100);
@@ -1187,15 +1185,11 @@ public class gameconfig implements Listener {
         
         int newRate = dropRates.getOrDefault(key, 0) + increment;
         
-        // Apply limits
-        if (key.equals("FEATHER") || key.equals("ARROW")) {
-            newRate = Math.max(0, Math.min(newRate, 10)); // 0-10 for counts
-        } else {
-            newRate = Math.max(0, Math.min(newRate, 100)); // 0-100 for percentages
-        }
+        // Apply limits (0% to max%)
+        newRate = Math.max(0, Math.min(newRate, max));
         
         dropRates.put(key, newRate);
-        player.sendMessage("§aUpdated " + key + " to " + newRate + (key.equals("FEATHER") || key.equals("ARROW") ? "" : "%"));
+        player.sendMessage("§aUpdated " + key + " to " + newRate + "% multiplier");
         
         openDrop(player); // Refresh menu
     }
@@ -2357,17 +2351,6 @@ public class gameconfig implements Listener {
     	switchTime = newSwitchTime;
     }
 
-    @EventHandler
-    public void onBlockBreak(BlockBreakEvent event) {
-        // Completely cancel any drops from manually broken leaves
-        if (event.getBlock().getType() == Material.LEAVES || 
-            event.getBlock().getType() == Material.LEAVES_2) {
-            event.setCancelled(true);
-            // Optional: Replant leaves to prevent cheating
-            event.getBlock().setType(event.getBlock().getType()); 
-        }
-        
-    }
     private void handleLeafDrops(Block block) {
         // Skip if not leaves
         if (block.getType() != Material.LEAVES && block.getType() != Material.LEAVES_2) {
@@ -2399,11 +2382,7 @@ public class gameconfig implements Listener {
     @EventHandler
     public void onLeavesDecay(LeavesDecayEvent event) {
         // Only process if decay was natural
-        if (isNaturalDecay(event.getBlock())) {
-            handleNaturalLeafDrops(event.getBlock());
-        } else {
-            event.setCancelled(true);
-        }
+    	handleNaturalLeafDrops(event.getBlock());
     }
     private boolean isNaturalDecay(Block block) {
         // Advanced check - ensure no player caused this
@@ -2412,79 +2391,25 @@ public class gameconfig implements Listener {
         }
         return true;
     }
-    private Block findTreeBase(Block leafBlock) {
-        // Search downward from the leaf to find the log
-        for (int y = leafBlock.getY(); y > 0; y--) {
-            Block current = leafBlock.getWorld().getBlockAt(leafBlock.getX(), y, leafBlock.getZ());
-            if (current.getType().toString().endsWith("_LOG")) {
-                return current; // Found the tree's log
-            }
-        }
-        return null; // No log found below this leaf
-    }
-    public void onEnable() {
-    	Bukkit.getScheduler().runTaskTimer((Plugin) this, () -> {
-    	    treeDrops.clear(); // Reset every 10 minutes
-    	}, 12000L, 12000L);
-    }
+
     private void handleNaturalLeafDrops(Block leafBlock) {
         // Vanilla base chances
-        double baseAppleChance = 0.005; // 0.5%
-        double baseGoldenChance = 0.001; // 0.1%
+        double appleChance = VANILLA_APPLE_RATE * (1 + (getDropRate("APPLE") * 0.25));
+        double goldenChance = VANILLA_GOLDEN_RATE * (1 + (getDropRate("GOLDEN_APPLE") * 0.25));
         
-        // Apply configured bonuses (25% increments)
-        double appleChance = baseAppleChance * (1 + (getDropRate("APPLE") * 0.25));
-        double goldenChance = baseGoldenChance * (1 + (getDropRate("GOLDEN_APPLE") * 0.5));
-        
-        // Tree-based limits
-        Block tree = findTreeBase(leafBlock);
-        if (tree == null) return;
-        
-        String treeId = tree.getLocation().getBlockX() + ":" + 
-                       tree.getLocation().getBlockZ();
-        
-        // Get or initialize drop counts
-        Map<String, Integer> drops = treeDrops.computeIfAbsent(treeId, k -> new HashMap<>());
-        int apples = drops.getOrDefault("APPLE", 0);
-        int goldenApples = drops.getOrDefault("GOLDEN", 0);
-        
-        // Apple drops (max 4 per tree)
-        if (apples < 4 && Math.random() < appleChance) {
+        // Apple drops
+        if (Math.random() < appleChance) {
             leafBlock.getWorld().dropItemNaturally(leafBlock.getLocation(), 
                 new ItemStack(Material.APPLE));
-            drops.put("APPLE", apples + 1);
         }
         
-        // Golden apple drops (max 1 per tree)
-        if (goldenApples < 1 && Math.random() < goldenChance) {
+        // Golden apple drops
+        if (Math.random() < goldenChance) {
             leafBlock.getWorld().dropItemNaturally(leafBlock.getLocation(), 
                 new ItemStack(Material.GOLDEN_APPLE));
-            drops.put("GOLDEN", goldenApples + 1);
         }
     }
 
-    private final Map<String, Map<String, Integer>> treeDrops = new HashMap<>();
-    private Block findNearestLog(Block leaf) {
-        // Check blocks below first (most common tree structure)
-        for (int y = leaf.getY(); y > 0; y--) {
-            Block check = leaf.getWorld().getBlockAt(leaf.getX(), y, leaf.getZ());
-            if (check.getType().toString().endsWith("_LOG")) {
-                return check;
-            }
-        }
-        
-        // Check 3x3 area around if no log directly below
-        for (int x = -1; x <= 1; x++) {
-            for (int z = -1; z <= 1; z++) {
-                Block check = leaf.getRelative(x, -1, z);
-                if (check.getType().toString().endsWith("_LOG")) {
-                    return check;
-                }
-            }
-        }
-        
-        return null;
-    }
     public void setDropRate(String type, int percentage) {
         // Cap at 200% (3x vanilla for apples, 2x for golden)
         int capped = Math.min(percentage, 200);
