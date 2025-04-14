@@ -22,10 +22,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import Rules.gameconfig;
-import Rules.spec;
 import decoration.ScoreboardHandler;
 import events.ServerSlotChangedEvent;
-import events.gameEndEvent;
 import events.GameStartEvent;
 import gamemodes.Gamestatus;
 
@@ -33,12 +31,10 @@ public class CommandCenter implements CommandExecutor{
 	String maintag = "§8[§6§lCHANCE_MAKER§r§8] §7: ";
 	private Field maxPlayersField;
     private final UHCTeamManager teamManager;
-    private final ScoreboardHandler scoreBoard;
     private final ConfigManager configManager;
     public CommandCenter(UHCTeamManager teamManager,ScoreboardHandler scoreBoard,ConfigManager configManager) {
         this.configManager = configManager;
         this.teamManager = teamManager;
-        this.scoreBoard = scoreBoard;
     }
 	public void onDisable() {
         updateServerProperties();
@@ -86,8 +82,7 @@ public class CommandCenter implements CommandExecutor{
 				player.sendMessage(maintag+"§cAn error has been occured");
 			} else if (args.length == 1) {
 				int maxslot = Bukkit.getServer().getMaxPlayers() + Integer.parseInt(args[0]);
-				Player player = (Player) sender;
-	            ServerSlotChangedEvent event = new ServerSlotChangedEvent(Bukkit.getMaxPlayers(),maxslot); // Replace with your actual constructor for the event
+				ServerSlotChangedEvent event = new ServerSlotChangedEvent(Bukkit.getMaxPlayers(),maxslot); // Replace with your actual constructor for the event
 	            Bukkit.getServer().getPluginManager().callEvent(event);
 				gameconfig.setSlot(maxslot);
 				try {
@@ -115,19 +110,6 @@ public class CommandCenter implements CommandExecutor{
 					
 				}
 			}
-		}
-		if (cmd.getName().equalsIgnoreCase("spec")) {
-			if (args.length !=1) {
-				Player player = (Player) sender;
-				player.sendMessage(maintag+"§cAn error has been occured");
-		}else if (args.length == 1 ) {
-			boolean verifspec = spec.getspect();
-			if(verifspec == true) {
-				spec.setspect(false);
-			}else {
-				spec.setspect(true);
-			}
-		}
 		}
 		if(cmd.getName().equalsIgnoreCase("start")) {
 			Gamestatus.setStatus(1);
