@@ -16,15 +16,23 @@ import java.util.*;
 public class TeamSelectionSystem implements Listener {
     private final UHCTeamManager teamManager;
     private final JavaPlugin plugin;
+    private final NamespacedKey bannerKey;
+    private final NamespacedKey comparatorKey;
     private final Map<Player, Integer> teamSelectionPages = new HashMap<>();
     private static final int TEAMS_PER_PAGE = 28; // 7 rows * 4 columns (excluding borders)
 
     public TeamSelectionSystem(UHCTeamManager teamManager, JavaPlugin plugin) {
         this.teamManager = teamManager;
         this.plugin = plugin;
+        this.bannerKey = new NamespacedKey(plugin, "team_banner");
+        this.comparatorKey = new NamespacedKey(plugin, "config_comparator");
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
-
+    public void updateAllPlayersBanners() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            giveSelectionBanner(player);
+        }
+    }
     public void giveSelectionBanner(Player player) {
         if (gameconfig.getTeamSize() > 1) {
             // Remove any existing team selection banners first
@@ -33,68 +41,113 @@ public class TeamSelectionSystem implements Listener {
             // Create the banner
             ItemStack banner = createTeamSelectionBanner();
             
-            // Set banner to be unplaceable, undroppable, and unmovable
+            // Add persistent data to identify it
             ItemMeta meta = banner.getItemMeta();
+            meta.getPersistentDataContainer().set(bannerKey, PersistentDataType.BYTE, (byte) 1);
             meta.addItemFlags(ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_ATTRIBUTES);
             banner.setItemMeta(meta);
             
             // Add to appropriate slot (slot 0 for non-op, slot 1 for op)
             int slot = player.isOp() ? 1 : 0;
             
-            // Ensure the slot is empty or contains the banner (to avoid overwriting other items)
-            if (player.getInventory().getItem(slot) == null || 
-                (player.getInventory().getItem(slot).isSimilar(banner))) {
-                player.getInventory().setItem(slot, banner);
-            } else {
-                // Find first empty slot if preferred slot is occupied
-                player.getInventory().addItem(banner);
-            }
+            // Force set the item in the slot
+            player.getInventory().setItem(slot, banner);
         } else {
             removeTeamBanners(player);
         }
+        
+        // Handle comparator for OPs
+        if (player.isOp()) {
+            giveConfigComparator(player);
+        }
+    }
+    private void giveConfigComparator(Player player) {
+        // Remove any existing comparators first
+        removeConfigComparators(player);
+        
+        ItemStack comparator = new ItemStack(Material.REDSTONE_COMPARATOR);
+        ItemMeta meta = comparator.getItemMeta();
+        meta.setDisplayName("§eGame Config");
+        meta.getPersistentDataContainer().set(comparatorKey, PersistentDataType.BYTE, (byte) 1);
+        meta.addItemFlags(ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_ATTRIBUTES);
+        comparator.setItemMeta(meta);
+        
+        // Always set to slot 0 for OPs
+        player.getInventory().setItem(0, comparator);
     }
     private void removeTeamBanners(Player player) {
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && item.getType() == Material.BANNER && 
-                item.hasItemMeta() && 
-                item.getItemMeta().getDisplayName().equals(ChatColor.GOLD + "Team Selection")) {
-                player.getInventory().remove(item);
+        for (int i = 0; i < player.getInventory().getSize(); i++) {
+            ItemStack item = player.getInventory().getItem(i);
+            if (isTeamBanner(item)) {
+                player.getInventory().clear(i);
             }
         }
     }
+    private void removeConfigComparators(Player player) {
+        for (int i = 0; i < player.getInventory().getSize(); i++) {
+            ItemStack item = player.getInventory().getItem(i);
+            if (isConfigComparator(item)) {
+                player.getInventory().clear(i);
+            }
+        }
+    }
+    
     @EventHandler
     public void onPlayerDropItem(PlayerDropItemEvent event) {
         ItemStack dropped = event.getItemDrop().getItemStack();
         if (isTeamBanner(dropped) || isConfigComparator(dropped)) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(ChatColor.RED + "You cannot drop this item!");
+            event.getPlayer().updateInventory();
+        }
+    }
+    @EventHandler
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        if (event.getAction().toString().contains("RIGHT_CLICK_BLOCK") && 
+            (isTeamBanner(event.getItem()) || isConfigComparator(event.getItem()))) {
+            event.setCancelled(true);
         }
     }
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player)) return;
         
+        Player player = (Player) event.getWhoClicked();
         ItemStack clicked = event.getCurrentItem();
+        
+        // Prevent moving special items from their slots
         if (clicked != null && (isTeamBanner(clicked) || isConfigComparator(clicked))) {
-            // Prevent moving from its slot
-            if (event.getSlot() == (event.getWhoClicked().isOp() ? 1 : 0)) {
+            int targetSlot = isConfigComparator(clicked) ? 0 : (player.isOp() ? 1 : 0);
+            
+            // Only allow moving if it's staying in its designated slot
+            if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY || 
+                (event.getSlot() == targetSlot && event.getRawSlot() != targetSlot)) {
                 event.setCancelled(true);
+                player.updateInventory();
             }
         }
     }
+    @EventHandler
+    public void onPlayerSwapHandItems(PlayerSwapHandItemsEvent event) {
+        if (isTeamBanner(event.getOffHandItem()) || isTeamBanner(event.getMainHandItem()) ||
+            isConfigComparator(event.getOffHandItem()) || isConfigComparator(event.getMainHandItem())) {
+            event.setCancelled(true);
+        }
+    }
+    
     private boolean isTeamBanner(ItemStack item) {
         return item != null && 
                item.getType() == Material.BANNER && 
                item.hasItemMeta() && 
-               item.getItemMeta().getDisplayName().equals(ChatColor.GOLD + "Team Selection");
+               item.getItemMeta().getPersistentDataContainer().has(bannerKey, PersistentDataType.BYTE);
     }
 
     private boolean isConfigComparator(ItemStack item) {
         return item != null && 
                item.getType() == Material.REDSTONE_COMPARATOR && 
                item.hasItemMeta() && 
-               item.getItemMeta().getDisplayName().equals("§eGame Config");
+               item.getItemMeta().getPersistentDataContainer().has(comparatorKey, PersistentDataType.BYTE);
     }
+}
 
 
     private ItemStack createTeamSelectionBanner() {

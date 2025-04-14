@@ -29,9 +29,7 @@ public class GlobalVariableListener implements Listener {
 
     @EventHandler
     public void onTeamSizeChanged(TeamSizeChangedEvent event) {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            teamSelectionSystem.giveSelectionBanner(player);
-        }
+        teamSelectionSystem.updateAllPlayersBanners();
         int newTeamSize = event.getNewTeamSize();
         int serverSlot = Bukkit.getServer().getMaxPlayers();
         int idealTeamCount = (serverSlot + newTeamSize - 1) / newTeamSize;

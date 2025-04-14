@@ -1565,28 +1565,8 @@ public class gameconfig implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        teamSelectionSystem.giveSelectionBanner(player);
-        
-        if (player.isOp()) {
-            // Remove any existing comparators first
-            player.getInventory().remove(Material.REDSTONE_COMPARATOR);
-            
-            // Create comparator
-            ItemStack comparator = new ItemStack(Material.REDSTONE_COMPARATOR);
-            ItemMeta meta = comparator.getItemMeta();
-            meta.setDisplayName("§eGame Config");
-            meta.addItemFlags(ItemFlag.HIDE_PLACED_ON, ItemFlag.HIDE_DESTROYS, ItemFlag.HIDE_ATTRIBUTES);
-            comparator.setItemMeta(meta);
-            
-            // Add to slot 1
-            if (player.getInventory().getItem(1) == null || 
-                player.getInventory().getItem(1).getType() == Material.REDSTONE_COMPARATOR) {
-                player.getInventory().setItem(1, comparator);
-            } else {
-                // Find first empty slot if slot 1 is occupied by something else
-                player.getInventory().addItem(comparator);
-            }
-        }
+        // Let TeamSelectionSystem handle both banner and comparator
+        plugin.getTeamSelectionSystem().giveSelectionBanner(player);
     }
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
@@ -2221,6 +2201,7 @@ public class gameconfig implements Listener {
     	        borderShrinking = true; // Lock the border speed after it is set
     	    }
     	}
+    	
     	public void startBorderShrink() {
     	    World world = Bukkit.getWorld("world");
     	    if (world == null) return;
@@ -2342,9 +2323,11 @@ public class gameconfig implements Listener {
     }
 
     public static void setTeamSize(int newSize) {
-    		Bukkit.getServer().getPluginManager().callEvent(new TeamSizeChangedEvent(teamSize,newSize));
-    		teamSize = newSize;
-    		
+        if (teamSize != newSize) {
+            int oldSize = teamSize;
+            teamSize = newSize;
+            Bukkit.getServer().getPluginManager().callEvent(new TeamSizeChangedEvent(oldSize, newSize));
+        }
     }
     public static String getGameName() {
         return gameName;
