@@ -168,7 +168,7 @@ import decoration.ScoreboardHandler;
 	            applyPower(player, playerPowers.get(player.getUniqueId()));
 	        }
 	    }
-	    private void applyPower(Player player, int power) {
+	    void applyPower(Player player, int power) {
 	        // Clear existing effects first
 	        clearPlayerPowers(player);
 	        
@@ -406,6 +406,9 @@ import decoration.ScoreboardHandler;
 	            meta.setPower(2);
 	            firework.setFireworkMeta(meta);
 	        }
+	    }
+	    public int getPlayerPower(UUID playerId) {
+	        return playerPowers.getOrDefault(playerId, -1);
 	    }
 
 	}
