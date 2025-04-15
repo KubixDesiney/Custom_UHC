@@ -27,13 +27,17 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.BrewEvent;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.inventory.Inventory;
@@ -477,72 +481,98 @@ public class gameconfig implements Listener {
         return lantern;
     }
     private boolean noBreakEnabled = false;
- // 4. Add these new methods somewhere in the class
     private void makeAllItemsUnbreakable() {
         for (Player player : Bukkit.getOnlinePlayers()) {
             // Armor
-            for (ItemStack armor : player.getInventory().getArmorContents()) {
-                if (armor != null) {
-                    makeUnbreakable(armor);
+            ItemStack[] armor = player.getInventory().getArmorContents();
+            for (int i = 0; i < armor.length; i++) {
+                if (armor[i] != null && isBreakableItem(armor[i].getType())) {
+                    armor[i] = makeUnbreakable(armor[i].clone());
                 }
             }
+            player.getInventory().setArmorContents(armor);
             
             // Inventory items
-            for (ItemStack item : player.getInventory().getContents()) {
+            for (int i = 0; i < player.getInventory().getSize(); i++) {
+                ItemStack item = player.getInventory().getItem(i);
                 if (item != null && isBreakableItem(item.getType())) {
-                    makeUnbreakable(item);
+                    player.getInventory().setItem(i, makeUnbreakable(item.clone()));
                 }
             }
         }
     }
-
     private void makeAllItemsBreakable() {
         for (Player player : Bukkit.getOnlinePlayers()) {
             // Armor
-            for (ItemStack armor : player.getInventory().getArmorContents()) {
-                if (armor != null) {
-                    makeBreakable(armor);
+            ItemStack[] armor = player.getInventory().getArmorContents();
+            for (int i = 0; i < armor.length; i++) {
+                if (armor[i] != null && isBreakableItem(armor[i].getType())) {
+                    armor[i] = makeBreakable(armor[i].clone());
                 }
             }
+            player.getInventory().setArmorContents(armor);
             
             // Inventory items
-            for (ItemStack item : player.getInventory().getContents()) {
+            for (int i = 0; i < player.getInventory().getSize(); i++) {
+                ItemStack item = player.getInventory().getItem(i);
                 if (item != null && isBreakableItem(item.getType())) {
-                    makeBreakable(item);
+                    player.getInventory().setItem(i, makeBreakable(item.clone()));
                 }
             }
         }
     }
+    
 
-    private void makeUnbreakable(ItemStack item) {
+    private ItemStack makeUnbreakable(ItemStack item) {
         ItemMeta meta = item.getItemMeta();
         meta.spigot().setUnbreakable(true);
         meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
         item.setItemMeta(meta);
+        return item;
     }
 
-    private void makeBreakable(ItemStack item) {
+    private ItemStack makeBreakable(ItemStack item) {
         ItemMeta meta = item.getItemMeta();
         meta.spigot().setUnbreakable(false);
         item.setItemMeta(meta);
+        return item;
     }
 
     private boolean isBreakableItem(Material material) {
-        return material.name().endsWith("_AXE") || 
-               material.name().endsWith("_PICKAXE") || 
-               material.name().endsWith("_SHOVEL") || 
-               material.name().endsWith("_HOE") || 
-               material.name().endsWith("_SWORD") || 
-               material.name().endsWith("_HELMET") || 
-               material.name().endsWith("_CHESTPLATE") || 
-               material.name().endsWith("_LEGGINGS") || 
-               material.name().endsWith("_BOOTS") || 
+        String typeName = material.name();
+        return typeName.endsWith("_AXE") || 
+               typeName.endsWith("_PICKAXE") || 
+               typeName.endsWith("_SHOVEL") || 
+               typeName.endsWith("_HOE") || 
+               typeName.endsWith("_SWORD") || 
+               typeName.endsWith("_HELMET") || 
+               typeName.endsWith("_CHESTPLATE") || 
+               typeName.endsWith("_LEGGINGS") || 
+               typeName.endsWith("_BOOTS") || 
                material == Material.BOW || 
                material == Material.FISHING_ROD || 
                material == Material.SHEARS || 
-               material == Material.FLINT_AND_STEEL;
+               material == Material.FLINT_AND_STEEL ||
+               material == Material.CARROT_STICK;
+    }
+    @EventHandler
+    public void onPlayerItemDamage(PlayerItemDamageEvent event) {
+        if (noBreakEnabled && isBreakableItem(event.getItem().getType())) {
+            event.setCancelled(true);
+        }
     }
 
+    @EventHandler
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        if (noBreakEnabled && event.getDamager() instanceof Player) {
+            Player player = (Player) event.getDamager();
+            ItemStack item = player.getInventory().getItemInHand();
+            if (item != null && isBreakableItem(item.getType())) {
+                // This prevents durability loss when attacking
+                item.setDurability((short) 0);
+            }
+        }
+    }
     // 5. Add this to the GameStartEvent handler (around line 1830)
     
  // ✅ Fix addItem1 to Work for All Items
@@ -2121,6 +2151,7 @@ public class gameconfig implements Listener {
              event.getPlayer().sendMessage(ChatColor.RED + "Nether access is disabled!");
          }
      }
+
      @EventHandler
      public void onPlayerInteract1(PlayerInteractEvent event) {
          if (!isNetherAccessEnabled && 
