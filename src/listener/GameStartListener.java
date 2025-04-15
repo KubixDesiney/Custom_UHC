@@ -203,7 +203,7 @@ import decoration.ScoreboardHandler;
 	                break;
 	        }
 	    }
-	    private void clearPlayerPowers(Player player) {
+	    void clearPlayerPowers(Player player) {
 	        for (PotionEffect effect : player.getActivePotionEffects()) {
 	        	jumpBoostPlayers.remove(player.getUniqueId());
 	            player.removePotionEffect(effect.getType());
