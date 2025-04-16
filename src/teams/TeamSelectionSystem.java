@@ -10,6 +10,7 @@ import org.bukkit.inventory.meta.*;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import Rules.gameconfig;
+import gamemodes.Gamestatus;
 import gamemodes.gamemode;
 
 import java.util.*;
@@ -31,38 +32,38 @@ public class TeamSelectionSystem implements Listener {
         }
         }
     public void giveSelectionBanner(Player player) {
-        if (gamemode.getMode() == 1) {
+        // Don't give anything if game is in progress
+        if (Gamestatus.getStatus() == 1) {
             removeTeamBanners(player);
             removeConfigComparators(player);
             return;
         }
+
+        // Only give banner if team size > 1 and game hasn't started
         if (gameconfig.getTeamSize() > 1) {
-            // Remove any existing team selection banners first
             removeTeamBanners(player);
-            
-            // Create the banner
             ItemStack banner = createTeamSelectionBanner();
-            
-            // Add special lore to identify it
             ItemMeta meta = banner.getItemMeta();
-            List<String> lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
+            List<String> lore = new ArrayList<>();
             lore.add(ChatColor.DARK_PURPLE + "UHC_TEAM_BANNER");
             meta.setLore(lore);
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             banner.setItemMeta(meta);
             
-            // Add to appropriate slot (slot 0 for non-op, slot 1 for op)
-            int slot = player.isOp() ? 1 : 0;
-            
-            // Force set the item in the slot
-            player.getInventory().setItem(slot, banner);
+            // Find first empty hotbar slot
+            for (int i = 0; i < 9; i++) {
+                if (player.getInventory().getItem(i) == null) {
+                    player.getInventory().setItem(i, banner);
+                    break;
+                }
+            }
         } else {
             removeTeamBanners(player);
         }
         
-        // Handle comparator for OPs
-        if (player.isOp()) {
-        		giveConfigComparator(player);
+        // Only give comparator to OPs before game starts
+        if (player.isOp() && Gamestatus.getStatus() != 1) {
+            giveConfigComparator(player);
         }
     }
 
@@ -77,26 +78,13 @@ public class TeamSelectionSystem implements Listener {
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         comparator.setItemMeta(meta);
         
-        // Find empty slot for OP players (prefer slot 0 but find any if needed)
-        int emptySlot = findEmptySlot(player, 0);
-        if (emptySlot != -1) {
-            player.getInventory().setItem(emptySlot, comparator);
-        }
-    }
-
-    private int findEmptySlot(Player player, int preferredSlot) {
-        // Check preferred slot first
-        if (player.getInventory().getItem(preferredSlot) == null) {
-            return preferredSlot;
-        }
-        
-        // Search for any empty slot
-        for (int i = 0; i < 9; i++) { // Only check hotbar
+        // Find first empty hotbar slot
+        for (int i = 0; i < 9; i++) {
             if (player.getInventory().getItem(i) == null) {
-                return i;
+                player.getInventory().setItem(i, comparator);
+                break;
             }
         }
-        return -1; // No empty slot found
     }
 
     private void removeTeamBanners(Player player) {
@@ -179,7 +167,9 @@ public class TeamSelectionSystem implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-    		giveSelectionBanner(event.getPlayer());
+        if (Gamestatus.getStatus() != 1) { 
+            giveSelectionBanner(event.getPlayer());
+        }
     }
 
     @EventHandler

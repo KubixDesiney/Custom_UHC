@@ -31,6 +31,7 @@ public class SafeMinerListener implements Listener {
     private final Map<UUID, Boolean> pendingRevives = new HashMap<>();
     private final Map<UUID, Integer> originalPowers = new HashMap<>();
     private final Map<UUID, Boolean> invinciblePlayers = new HashMap<>();
+    private final Map<UUID, List<PotionEffect>> savedEffects = new HashMap<>();
 
     public SafeMinerListener(gameconfig config, UHCTeamManager teamManager) {
         this.config = config;
@@ -53,87 +54,97 @@ public class SafeMinerListener implements Listener {
             originalPowers.put(player.getUniqueId(), gameStartListener.getPlayerPower(player.getUniqueId()));
         }
         
+        // Store all active effects
+        List<PotionEffect> effectsToSave = new ArrayList<>(player.getActivePotionEffects());
+        savedEffects.put(player.getUniqueId(), effectsToSave);
+        
         pendingRevives.put(player.getUniqueId(), true);
         Location deathLocation = player.getLocation();
         ItemStack[] inventory = player.getInventory().getContents();
         ItemStack[] armor = player.getInventory().getArmorContents();
-        List<PotionEffect> effects = new ArrayList<>(player.getActivePotionEffects());
         int xpLevel = player.getLevel();
         float xpProgress = player.getExp();
+        
+        // Instant respawn
+        event.setDeathMessage(null);
+        event.setKeepInventory(true);
+        event.getDrops().clear();
+        player.spigot().respawn();
         
         new BukkitRunnable() {
             @Override
             public void run() {
                 if (!player.isOnline() || !pendingRevives.containsKey(player.getUniqueId())) {
-                    pendingRevives.remove(player.getUniqueId());
+                    cleanupPlayerData(player.getUniqueId());
                     return;
                 }
                 
-                player.spigot().respawn();
+                // Immediate state restoration
                 player.setGameMode(GameMode.SURVIVAL);
+                player.teleport(deathLocation);
+                player.getInventory().setContents(inventory);
+                player.getInventory().setArmorContents(armor);
                 
+                // Health and food
+                if (gameconfig.getInstance().isDoubleHealthEnabled()) {
+                    player.setMaxHealth(40);
+                    player.setHealth(40);
+                } else {
+                    player.setHealth(20);
+                }
+                player.setFoodLevel(20);
+                player.setSaturation(20);
+                player.setLevel(xpLevel);
+                player.setExp(xpProgress);
+                
+                // Apply invincibility immediately
+                makeInvincible(player);
+                
+                player.sendMessage(ChatColor.GREEN + "You have been revived by the SafeMiner scenario!");
+                player.sendMessage(ChatColor.GOLD + "You are invincible for 20 seconds!");
+                
+                // Apply effects via commands after 3 seconds
                 new BukkitRunnable() {
                     @Override
                     public void run() {
+                        if (!player.isOnline()) {
+                            cleanupPlayerData(player.getUniqueId());
+                            return;
+                        }
+                        
                         // Clear existing effects first
-                        for (PotionEffect effect : player.getActivePotionEffects()) {
-                            player.removePotionEffect(effect.getType());
-                        }
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect " + player.getName() + " clear");
                         
-                        // Restore basic player state
-                        player.teleport(deathLocation);
-                        player.getInventory().setContents(inventory);
-                        player.getInventory().setArmorContents(armor);
-                        
-                        // Restore health based on scenarios
-                        if (gameconfig.getInstance().isDoubleHealthEnabled()) {
-                            player.setMaxHealth(40);
-                            player.setHealth(40);
-                        } else {
-                            player.setHealth(20);
-                        }
-                        
-                        player.setFoodLevel(20);
-                        player.setSaturation(20);
-                        player.setLevel(xpLevel);
-                        player.setExp(xpProgress);
-                        
-                        // Restore effects
-                        for (PotionEffect effect : effects) {
-                            player.addPotionEffect(effect, true); // Force override
+                        // Apply saved effects via commands
+                        if (savedEffects.containsKey(player.getUniqueId())) {
+                            for (PotionEffect effect : savedEffects.get(player.getUniqueId())) {
+                                String command = String.format("effect %s %s %d %d",
+                                    player.getName(),
+                                    effect.getType().getName(),
+                                    effect.getDuration()/20,  // Convert ticks to seconds
+                                    effect.getAmplifier());
+                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                            }
                         }
                         
                         // Reapply SuperHero power if enabled
                         if (gameconfig.getInstance().isSuperHeroesEnabled() && originalPowers.containsKey(player.getUniqueId())) {
                             GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
+                            gameStartListener.clearPlayerPowers(player);
                             gameStartListener.applyPower(player, originalPowers.get(player.getUniqueId()));
                         }
                         
                         // Reapply CatEyes if enabled
                         if (config.isCatEyesEnabled()) {
-                            player.addPotionEffect(new PotionEffect(
-                                PotionEffectType.NIGHT_VISION, 
-                                Integer.MAX_VALUE, 
-                                0, 
-                                false, 
-                                false
-                            ), true);
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
+                                "effect " + player.getName() + " minecraft:night_vision 999999 0 true");
                         }
                         
-                        // Apply invincibility
-                        makeInvincible(player);
-                        
-                        player.sendMessage(ChatColor.GREEN + "You have been revived by the SafeMiner scenario!");
-                        player.sendMessage(ChatColor.GOLD + "You are invincible for 20 seconds!");
-                        pendingRevives.remove(player.getUniqueId());
+                        cleanupPlayerData(player.getUniqueId());
                     }
-                }.runTaskLater(main.getInstance(), 5L);
+                }.runTaskLater(main.getInstance(), 60L); // 3 second delay
             }
-        }.runTaskLater(main.getInstance(), 40L);
-        
-        event.setDeathMessage(null);
-        event.setKeepInventory(true);
-        event.getDrops().clear();
+        }.runTaskLater(main.getInstance(), 5L); // Small initial delay
     }
     
     private void makeInvincible(Player player) {
@@ -144,7 +155,13 @@ public class SafeMinerListener implements Listener {
                 invinciblePlayers.remove(player.getUniqueId());
                 player.sendMessage(ChatColor.RED + "Your invincibility has worn off!");
             }
-        }.runTaskLater(main.getInstance(), 400L);
+        }.runTaskLater(main.getInstance(), 400L); // 20 seconds
+    }
+    
+    private void cleanupPlayerData(UUID playerId) {
+        pendingRevives.remove(playerId);
+        savedEffects.remove(playerId);
+        originalPowers.remove(playerId);
     }
     
     @EventHandler
