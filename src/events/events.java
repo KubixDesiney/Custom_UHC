@@ -56,7 +56,7 @@ public class events implements Listener {
 	    Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
 	    
 	    if (scoreboard.getObjective("showhealth") != null) {
-	        player.setScoreboard(scoreboard); // Apply the scoreboard to the player
+	        player.setScoreboard(scoreboard); 
 	    }
 		event.setJoinMessage("");
 		player.sendMessage(" ");

@@ -10,6 +10,7 @@ import org.bukkit.inventory.meta.*;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import Rules.gameconfig;
+import gamemodes.gamemode;
 
 import java.util.*;
 
@@ -28,7 +29,7 @@ public class TeamSelectionSystem implements Listener {
         for (Player player : Bukkit.getOnlinePlayers()) {
             giveSelectionBanner(player);
         }
-    }
+        }
     public void giveSelectionBanner(Player player) {
         if (gameconfig.getTeamSize() > 1) {
             // Remove any existing team selection banners first
@@ -56,7 +57,7 @@ public class TeamSelectionSystem implements Listener {
         
         // Handle comparator for OPs
         if (player.isOp()) {
-            giveConfigComparator(player);
+        		giveConfigComparator(player);
         }
     }
 
@@ -157,7 +158,7 @@ public class TeamSelectionSystem implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        giveSelectionBanner(event.getPlayer());
+    		giveSelectionBanner(event.getPlayer());
     }
 
     @EventHandler

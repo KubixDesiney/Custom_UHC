@@ -54,8 +54,14 @@ public class SafeMinerListener implements Listener {
             originalPowers.put(player.getUniqueId(), gameStartListener.getPlayerPower(player.getUniqueId()));
         }
         
-        // Store all active effects
-        savedEffects.put(player.getUniqueId(), new ArrayList<>(player.getActivePotionEffects()));
+        // Store all active effects (except invincibility if any)
+        List<PotionEffect> effectsToSave = new ArrayList<>();
+        for (PotionEffect effect : player.getActivePotionEffects()) {
+            if (effect.getType() != PotionEffectType.DAMAGE_RESISTANCE || effect.getAmplifier() < 10) {
+                effectsToSave.add(effect);
+            }
+        }
+        savedEffects.put(player.getUniqueId(), effectsToSave);
         
         pendingRevives.put(player.getUniqueId(), true);
         Location deathLocation = player.getLocation();
@@ -70,6 +76,7 @@ public class SafeMinerListener implements Listener {
                 if (!player.isOnline() || !pendingRevives.containsKey(player.getUniqueId())) {
                     pendingRevives.remove(player.getUniqueId());
                     savedEffects.remove(player.getUniqueId());
+                    originalPowers.remove(player.getUniqueId());
                     return;
                 }
                 
@@ -105,12 +112,28 @@ public class SafeMinerListener implements Listener {
                         // Restore all saved effects
                         if (savedEffects.containsKey(player.getUniqueId())) {
                             for (PotionEffect effect : savedEffects.get(player.getUniqueId())) {
-                                player.addPotionEffect(effect);
+                                player.addPotionEffect(effect, true); // Force override existing
                             }
                         }
                         
-                        // Force reapply scenarios
-                        forceReapplyScenarios(player);
+                        // Force reapply SuperHero power if enabled
+                        if (gameconfig.getInstance().isSuperHeroesEnabled() && originalPowers.containsKey(player.getUniqueId())) {
+                            GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
+                            gameStartListener.clearPlayerPowers(player);
+                            gameStartListener.applyPower(player, originalPowers.get(player.getUniqueId()));
+                        }
+                        
+                        // Force reapply CatEyes if enabled
+                        if (config.isCatEyesEnabled()) {
+                            player.removePotionEffect(PotionEffectType.NIGHT_VISION);
+                            player.addPotionEffect(new PotionEffect(
+                                PotionEffectType.NIGHT_VISION, 
+                                Integer.MAX_VALUE, 
+                                0, 
+                                false, 
+                                false
+                            ), true);
+                        }
                         
                         // Apply invincibility
                         makeInvincible(player);
@@ -120,6 +143,7 @@ public class SafeMinerListener implements Listener {
                         
                         pendingRevives.remove(player.getUniqueId());
                         savedEffects.remove(player.getUniqueId());
+                        originalPowers.remove(player.getUniqueId());
                     }
                 }.runTaskLater(main.getInstance(), 5L);
             }
@@ -128,34 +152,6 @@ public class SafeMinerListener implements Listener {
         event.setDeathMessage(null);
         event.setKeepInventory(true);
         event.getDrops().clear();
-    }
-    
-    private void forceReapplyScenarios(Player player) {
-        // Force reapply SuperHero power if enabled
-        if (gameconfig.getInstance().isSuperHeroesEnabled() && originalPowers.containsKey(player.getUniqueId())) {
-            GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
-            gameStartListener.clearPlayerPowers(player);
-            gameStartListener.applyPower(player, originalPowers.get(player.getUniqueId()));
-        }
-        
-        // Force reapply CatEyes if enabled
-        if (config.isCatEyesEnabled()) {
-            player.removePotionEffect(PotionEffectType.NIGHT_VISION);
-            player.addPotionEffect(new PotionEffect(
-                PotionEffectType.NIGHT_VISION, 
-                Integer.MAX_VALUE, 
-                0, 
-                false, 
-                false
-            ));
-        }
-        
-        // Force reapply MasterLevel if enabled
-        if (gameconfig.getInstance().isMasterLevelEnabled()) {
-            int xpAmount = config.getMasterLevelAmount();
-            player.setLevel(xpAmount);
-            player.setExp(0.99f);
-        }
     }
     
     private void makeInvincible(Player player) {
