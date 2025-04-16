@@ -86,12 +86,15 @@ public class SafeMinerListener implements Listener {
                 player.getInventory().setArmorContents(armor);
                 
                 // Health and food
-                if (gameconfig.getInstance().isDoubleHealthEnabled()) {
-                    player.setMaxHealth(40);
-                    player.setHealth(40);
-                } else {
-                    player.setHealth(20);
-                }
+                if (gameconfig.getInstance().isDoubleHealthEnabled() || 
+                        (gameconfig.getInstance().isSuperHeroesEnabled() && 
+                         originalPowers.containsKey(player.getUniqueId()) && 
+                         originalPowers.get(player.getUniqueId()) == 3)) {
+                        player.setMaxHealth(40);
+                        player.setHealth(40);
+                    } else {
+                        player.setHealth(20);
+                    }
                 player.setFoodLevel(20);
                 player.setSaturation(20);
                 player.setLevel(xpLevel);
