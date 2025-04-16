@@ -31,7 +31,6 @@ public class SafeMinerListener implements Listener {
     private final Map<UUID, Boolean> pendingRevives = new HashMap<>();
     private final Map<UUID, Integer> originalPowers = new HashMap<>();
     private final Map<UUID, Boolean> invinciblePlayers = new HashMap<>();
-    private final Map<UUID, List<PotionEffect>> savedEffects = new HashMap<>();
 
     public SafeMinerListener(gameconfig config, UHCTeamManager teamManager) {
         this.config = config;
@@ -54,19 +53,11 @@ public class SafeMinerListener implements Listener {
             originalPowers.put(player.getUniqueId(), gameStartListener.getPlayerPower(player.getUniqueId()));
         }
         
-        // Store all active effects (except invincibility if any)
-        List<PotionEffect> effectsToSave = new ArrayList<>();
-        for (PotionEffect effect : player.getActivePotionEffects()) {
-            if (effect.getType() != PotionEffectType.DAMAGE_RESISTANCE || effect.getAmplifier() < 10) {
-                effectsToSave.add(effect);
-            }
-        }
-        savedEffects.put(player.getUniqueId(), effectsToSave);
-        
         pendingRevives.put(player.getUniqueId(), true);
         Location deathLocation = player.getLocation();
         ItemStack[] inventory = player.getInventory().getContents();
         ItemStack[] armor = player.getInventory().getArmorContents();
+        List<PotionEffect> effects = new ArrayList<>(player.getActivePotionEffects());
         int xpLevel = player.getLevel();
         float xpProgress = player.getExp();
         
@@ -75,8 +66,6 @@ public class SafeMinerListener implements Listener {
             public void run() {
                 if (!player.isOnline() || !pendingRevives.containsKey(player.getUniqueId())) {
                     pendingRevives.remove(player.getUniqueId());
-                    savedEffects.remove(player.getUniqueId());
-                    originalPowers.remove(player.getUniqueId());
                     return;
                 }
                 
@@ -86,7 +75,7 @@ public class SafeMinerListener implements Listener {
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        // Clear any existing effects first
+                        // Clear existing effects first
                         for (PotionEffect effect : player.getActivePotionEffects()) {
                             player.removePotionEffect(effect.getType());
                         }
@@ -109,23 +98,19 @@ public class SafeMinerListener implements Listener {
                         player.setLevel(xpLevel);
                         player.setExp(xpProgress);
                         
-                        // Restore all saved effects
-                        if (savedEffects.containsKey(player.getUniqueId())) {
-                            for (PotionEffect effect : savedEffects.get(player.getUniqueId())) {
-                                player.addPotionEffect(effect, true); // Force override existing
-                            }
+                        // Restore effects
+                        for (PotionEffect effect : effects) {
+                            player.addPotionEffect(effect, true); // Force override
                         }
                         
-                        // Force reapply SuperHero power if enabled
+                        // Reapply SuperHero power if enabled
                         if (gameconfig.getInstance().isSuperHeroesEnabled() && originalPowers.containsKey(player.getUniqueId())) {
                             GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
-                            gameStartListener.clearPlayerPowers(player);
                             gameStartListener.applyPower(player, originalPowers.get(player.getUniqueId()));
                         }
                         
-                        // Force reapply CatEyes if enabled
+                        // Reapply CatEyes if enabled
                         if (config.isCatEyesEnabled()) {
-                            player.removePotionEffect(PotionEffectType.NIGHT_VISION);
                             player.addPotionEffect(new PotionEffect(
                                 PotionEffectType.NIGHT_VISION, 
                                 Integer.MAX_VALUE, 
@@ -140,10 +125,7 @@ public class SafeMinerListener implements Listener {
                         
                         player.sendMessage(ChatColor.GREEN + "You have been revived by the SafeMiner scenario!");
                         player.sendMessage(ChatColor.GOLD + "You are invincible for 20 seconds!");
-                        
                         pendingRevives.remove(player.getUniqueId());
-                        savedEffects.remove(player.getUniqueId());
-                        originalPowers.remove(player.getUniqueId());
                     }
                 }.runTaskLater(main.getInstance(), 5L);
             }

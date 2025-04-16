@@ -31,6 +31,11 @@ public class TeamSelectionSystem implements Listener {
         }
         }
     public void giveSelectionBanner(Player player) {
+        if (gamemode.getMode() == 1) {
+            removeTeamBanners(player);
+            removeConfigComparators(player);
+            return;
+        }
         if (gameconfig.getTeamSize() > 1) {
             // Remove any existing team selection banners first
             removeTeamBanners(player);
@@ -62,9 +67,7 @@ public class TeamSelectionSystem implements Listener {
     }
 
     private void giveConfigComparator(Player player) {
-        // Remove any existing comparators first
         removeConfigComparators(player);
-        
         ItemStack comparator = new ItemStack(Material.REDSTONE_COMPARATOR);
         ItemMeta meta = comparator.getItemMeta();
         meta.setDisplayName("§eGame Config");
@@ -74,8 +77,26 @@ public class TeamSelectionSystem implements Listener {
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         comparator.setItemMeta(meta);
         
-        // Always set to slot 0 for OPs
-        player.getInventory().setItem(0, comparator);
+        // Find empty slot for OP players (prefer slot 0 but find any if needed)
+        int emptySlot = findEmptySlot(player, 0);
+        if (emptySlot != -1) {
+            player.getInventory().setItem(emptySlot, comparator);
+        }
+    }
+
+    private int findEmptySlot(Player player, int preferredSlot) {
+        // Check preferred slot first
+        if (player.getInventory().getItem(preferredSlot) == null) {
+            return preferredSlot;
+        }
+        
+        // Search for any empty slot
+        for (int i = 0; i < 9; i++) { // Only check hotbar
+            if (player.getInventory().getItem(i) == null) {
+                return i;
+            }
+        }
+        return -1; // No empty slot found
     }
 
     private void removeTeamBanners(Player player) {
