@@ -115,40 +115,68 @@ public class SafeMinerListener implements Listener {
                             return;
                         }
 
-                        // Silent effect clearing
-                        for (PotionEffect effect : player.getActivePotionEffects()) {
-                            player.removePotionEffect(effect.getType());
-                        }
+                        // Clear existing effects silently
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "effect " + player.getName() +"clear");
 
-                        // Apply saved effects using proper effect names
-                        if (savedEffects.containsKey(player.getUniqueId())) {
-                            for (PotionEffect effect : savedEffects.get(player.getUniqueId())) {
-                                // Use proper Minecraft effect names
-                                String effectName = getMinecraftEffectName(effect.getType());
-                                if (effectName != null) {
-                                    int duration = Math.min(effect.getDuration()/20, 1000000); 
-                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
-                                        String.format("effect %s %s %d %d true",
-                                            player.getName(),
-                                            effectName,
-                                            duration,
-                                            effect.getAmplifier()));
-                                }
-                            }
+                        // Restore health based on scenarios
+                        if (gameconfig.getInstance().isDoubleHealthEnabled() || 
+                            (gameconfig.getInstance().isSuperHeroesEnabled() && 
+                             originalPowers.containsKey(player.getUniqueId()) && 
+                             originalPowers.get(player.getUniqueId()) == 3)) {
+                            player.setMaxHealth(40);
+                            player.setHealth(40);
                         }
 
                         // Reapply SuperHero power if enabled
                         if (gameconfig.getInstance().isSuperHeroesEnabled() && originalPowers.containsKey(player.getUniqueId())) {
-                            GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
-                            gameStartListener.clearPlayerPowers(player);
-                            gameStartListener.applyPower(player, originalPowers.get(player.getUniqueId()));
+                            int power = originalPowers.get(player.getUniqueId());
+                            switch (power) {
+                                case 0: // Speed + Haste
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
+                                        "effect " + player.getName() + " speed 1000000 1 true");
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
+                                        "effect " + player.getName() + " haste 1000000 1 true");
+                                    break;
+                                case 1: // Strength
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
+                                        "effect " + player.getName() + " strength 1000000 0 true");
+                                    break;
+                                case 2: // Resistance
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
+                                        "effect " + player.getName() + " resistance 1000000 0 true");
+                                    break;
+                                case 3: // Double Health (already handled above)
+                                    break;
+                                case 4: // Jump Boost + Haste
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
+                                        "effect " + player.getName() + " jump_boost 1000000 3 true");
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
+                                        "effect " + player.getName() + " haste 1000000 1 true");
+                                    break;
+                            }
                         }
 
                         // Reapply CatEyes if enabled
                         if (gameconfig.getInstance().isCatEyesEnabled()) {
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
-                                "effect " + player.getName() + " night_vision 999999 0 true");
+                                "effect " + player.getName() + " night_vision 1000000 0 true");
                         }
+
+                        // Reapply any other saved effects
+                        if (savedEffects.containsKey(player.getUniqueId())) {
+                            for (PotionEffect effect : savedEffects.get(player.getUniqueId())) {
+                                String effectName = getMinecraftEffectName(effect.getType());
+                                if (effectName != null) {
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
+                                        String.format("effect %s %s %d %d true",
+                                            player.getName(),
+                                            effectName,
+                                            Math.min(effect.getDuration()/20, 1000000),
+                                            effect.getAmplifier()));
+                                }
+                            }
+                        }
+                    
 
                         cleanupPlayerData(player.getUniqueId());
                     }
