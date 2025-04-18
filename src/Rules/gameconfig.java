@@ -50,6 +50,8 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.Potion;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import com.connorlinfoot.titleapi.TitleAPI;
+
 import decoration.ScoreboardHandler;
 import events.GameStartEvent;
 import events.TeamSizeChangedEvent;
@@ -164,6 +166,51 @@ public class gameconfig implements Listener {
         addItem(menu, 31, Material.EMERALD_BLOCK, "§2§l⮚ §a§lLet's go! §2§l⮘", "§7Start the game with selected settings!");
 
         player.openInventory(menu);
+    }
+    private void startCountdown(Player player) {
+        // Play initial sound
+        Sound sound = Sound.valueOf("BLOCK_NOTE_PLING");
+        player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+        
+        // Send initial title
+        TitleAPI.sendTitle(player, 0, 20, 0, "10", "§eBe ready...");
+        
+        // Set initial XP level
+        player.setLevel(10);
+        player.setExp(1.0f);
+        
+        new BukkitRunnable() {
+            int count = 9;
+            
+            @Override
+            public void run() {
+                if (count > 0) {
+                    // Update title
+                    if (count <= 5) {
+                        // For counts 5 and below, make the sound pitch higher
+                        float pitch = 1.0f + (5 - count) * 0.2f;
+                        player.playSound(player.getLocation(), sound, 1.0f, pitch);
+                        
+                        TitleAPI.sendTitle(player, 0, 20, 0, String.valueOf(count), 
+                            count == 1 ? "§aLet's go!" : "§eBe ready");
+                    } else {
+                        // For counts above 5, normal sound
+                        player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+                        TitleAPI.sendTitle(player, 0, 20, 0, String.valueOf(count), "§eBe ready...");
+                    }
+                    
+                    // Update XP bar
+                    player.setLevel(count);
+                    player.setExp(1.0f - ((10 - count) * 0.1f));
+                    
+                    count--;
+                } else {
+                    // Countdown finished - start the game
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "start");
+                    this.cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 20L, 20L); // Run every second (20 ticks)
     }
  // Add this with other boolean fields at the top of gameconfig.java
     private boolean spectatorModeEnabled = false;
@@ -1671,6 +1718,9 @@ public class gameconfig implements Listener {
                 player.sendMessage(ChatColor.YELLOW + "Spectator mode: " + 
                     (spectatorModeEnabled ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED"));
                 openMenu(player);
+            }  else if (event.getSlot() == 31) { // Emerald Block (Start)
+                player.closeInventory();
+                startCountdown(player);
             }
 
         }
