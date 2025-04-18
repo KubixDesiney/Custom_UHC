@@ -40,6 +40,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -167,7 +168,12 @@ public class gameconfig implements Listener {
 
         player.openInventory(menu);
     }
+    private final Map<UUID, BukkitRunnable> activeCountdowns = new HashMap<>();
+    private boolean countdownActive = false;
     private void startCountdown(Player player) {
+        // Close inventory immediately
+        player.closeInventory();
+        
         // Play initial sound
         Sound sound = Sound.valueOf("BLOCK_NOTE_PLING");
         player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
@@ -179,7 +185,17 @@ public class gameconfig implements Listener {
         player.setLevel(10);
         player.setExp(1.0f);
         
-        new BukkitRunnable() {
+        // Create new inventory with cancel option
+        Inventory countdownMenu = Bukkit.createInventory(null, 9, "Starting Game...");
+        ItemStack cancelItem = new ItemStack(Material.REDSTONE_BLOCK);
+        ItemMeta cancelMeta = cancelItem.getItemMeta();
+        cancelMeta.setDisplayName("§c§lCANCEL");
+        cancelItem.setItemMeta(cancelMeta);
+        countdownMenu.setItem(4, cancelItem);
+        player.openInventory(countdownMenu);
+        
+        // Create and track the countdown task
+        BukkitRunnable countdown = new BukkitRunnable() {
             int count = 9;
             
             @Override
@@ -207,12 +223,28 @@ public class gameconfig implements Listener {
                 } else {
                     // Countdown finished - start the game
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "start");
+                    activeCountdowns.remove(player.getUniqueId());
                     this.cancel();
                 }
             }
-        }.runTaskTimer(plugin, 20L, 20L); // Run every second (20 ticks)
+        };
+        
+        // Store the countdown task
+        activeCountdowns.put(player.getUniqueId(), countdown);
+        countdown.runTaskTimer(plugin, 20L, 20L); // Run every second (20 ticks)
     }
- // Add this with other boolean fields at the top of gameconfig.java
+    private void cancelCountdown(Player player) {
+        BukkitRunnable countdown = activeCountdowns.remove(player.getUniqueId());
+        if (countdown != null) {
+            countdown.cancel();
+            player.sendMessage(ChatColor.RED + "Countdown cancelled!");
+            player.setLevel(0);
+            player.setExp(0);
+            TitleAPI.clearTitle(player);
+            player.closeInventory();
+            openMenu(player); // Reopen main menu
+        }
+    }
     private boolean spectatorModeEnabled = false;
 
     // Add getter method
@@ -1718,11 +1750,24 @@ public class gameconfig implements Listener {
                 player.sendMessage(ChatColor.YELLOW + "Spectator mode: " + 
                     (spectatorModeEnabled ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED"));
                 openMenu(player);
-            }  else if (event.getSlot() == 31) { // Emerald Block (Start)
-                player.closeInventory();
+            } else if (event.getSlot() == 31) { // Emerald Block (Start)
                 startCountdown(player);
             }
 
+        }    else if (event.getView().getTitle().equals("Starting Game...")) {
+            event.setCancelled(true);
+            if (event.getCurrentItem() != null && 
+                event.getCurrentItem().getType() == Material.REDSTONE_BLOCK && 
+                event.getCurrentItem().getItemMeta().getDisplayName().equals("§c§lCANCEL")) {
+                cancelCountdown((Player) event.getWhoClicked());
+            }
+            }
+    }
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        BukkitRunnable countdown = activeCountdowns.remove(event.getPlayer().getUniqueId());
+        if (countdown != null) {
+            countdown.cancel();
         }
     }
     private static ItemStack[] startingInventory = new ItemStack[36]; // Main inventory (0-35)
