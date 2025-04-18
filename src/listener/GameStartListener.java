@@ -71,6 +71,7 @@ import decoration.ScoreboardHandler;
 	        UHCTeamManager teamManager = ((main) plugin).getTeamManager();
 	        Bukkit.getLogger().info("[GAME START] Teams alive: " + 
 	            teamManager.getAliveTeamCount());
+	        assignUnassignedPlayersToTeams();
 	        giveStartingItemsToAllPlayers();
 	        World world = Bukkit.getWorld("world");
 	        if (world == null) {
@@ -123,6 +124,59 @@ import decoration.ScoreboardHandler;
 
 	        showHealthInTablist();
 	        teleportTeamsToRandomLocation();
+	    }
+	    private void assignUnassignedPlayersToTeams() {
+	        UHCTeamManager teamManager = ((main) plugin).getTeamManager();
+	        gameconfig.getInstance();
+			int teamSize = gameconfig.getTeamSize();
+	        
+	        // If team size is 1 (solo mode), we don't need to assign teams
+	        if (teamSize <= 1) {
+	            return;
+	        }
+
+	        // Get all online players who aren't in a team
+	        List<Player> unassignedPlayers = new ArrayList<>();
+	        for (Player player : Bukkit.getOnlinePlayers()) {
+	            if (teamManager.getPlayerTeam(player) == null) {
+	                unassignedPlayers.add(player);
+	            }
+	        }
+
+	        // If no unassigned players, return
+	        if (unassignedPlayers.isEmpty()) {
+	            return;
+	        }
+
+	        // Get all available teams
+	        List<String> allTeams = UHCTeamManager.getAllTeams();
+	        if (allTeams.isEmpty()) {
+	            Bukkit.getLogger().warning("No teams available to assign players!");
+	            return;
+	        }
+
+	        // Assign unassigned players to random teams with available slots
+	        Random random = new Random();
+	        for (Player player : unassignedPlayers) {
+	            // Find teams with available slots
+	            List<String> availableTeams = new ArrayList<>();
+	            for (String teamName : allTeams) {
+	                if (UHCTeamManager.getPlayersInTeam(teamName).size() < teamSize) {
+	                    availableTeams.add(teamName);
+	                }
+	            }
+
+	            // If no teams with slots, break
+	            if (availableTeams.isEmpty()) {
+	                Bukkit.getLogger().warning("No teams with available slots left!");
+	                break;
+	            }
+
+	            // Assign to random team
+	            String randomTeam = availableTeams.get(random.nextInt(availableTeams.size()));
+	            teamManager.joinTeam(player, randomTeam);
+	            player.sendMessage(ChatColor.YELLOW + "You were automatically assigned to team " + randomTeam);
+	        }
 	    }
 	    @EventHandler
 	    public void onPlayerJoin(PlayerJoinEvent event) {
@@ -304,20 +358,30 @@ import decoration.ScoreboardHandler;
 	        }, 0L, 20L); // Update every second (20 ticks = 1 second)
 	    }
 	    private void teleportTeamsToRandomLocation() {
-	        // Get all teams and teleport players in each team
-	        for (String teamName : UHCTeamManager.getAllTeams()) {
-	            Bukkit.getLogger().info("Processing team: " + teamName);
-	            List<Player> teamPlayers = UHCTeamManager.getPlayersInTeam(teamName); // Get the players in the team
-
-	            if (!teamPlayers.isEmpty()) {
-	                // Generate a random location within the world border
+	        UHCTeamManager teamManager = ((main) plugin).getTeamManager();
+	        gameconfig.getInstance();
+			int teamSize = gameconfig.getTeamSize();
+	        
+	        if (teamSize == 1) {
+	            // Solo mode - teleport each player individually
+	            for (Player player : Bukkit.getOnlinePlayers()) {
 	                Location randomLocation = getRandomLocationInWorld();
+	                player.teleport(randomLocation);
+	                player.sendMessage(ChatColor.GREEN + "You have been teleported to a random location.");
+	            }
+	        } else {
+	            // Team mode - teleport teams together
+	            for (String teamName : UHCTeamManager.getAllTeams()) {
+	                Bukkit.getLogger().info("Processing team: " + teamName);
+	                List<Player> teamPlayers = UHCTeamManager.getPlayersInTeam(teamName);
 
-	                // Teleport each player in the team to the random location
-	                for (Player player : teamPlayers) {
-	                    Bukkit.getLogger().info("Teleporting player: " + player.getName());
-	                    player.teleport(randomLocation);
-	                    player.sendMessage(ChatColor.GREEN + "You have been teleported to your team's random location.");
+	                if (!teamPlayers.isEmpty()) {
+	                    Location randomLocation = getRandomLocationInWorld();
+	                    for (Player player : teamPlayers) {
+	                        Bukkit.getLogger().info("Teleporting player: " + player.getName());
+	                        player.teleport(randomLocation);
+	                        player.sendMessage(ChatColor.GREEN + "You have been teleported to your team's random location.");
+	                    }
 	                }
 	            }
 	        }
