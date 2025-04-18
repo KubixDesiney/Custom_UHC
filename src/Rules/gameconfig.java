@@ -174,55 +174,26 @@ public class gameconfig implements Listener {
     private static final Material CANCEL_ITEM = Material.REDSTONE_BLOCK;
     private static final int START_SLOT = 31; // Verify this is correct for your menu
     private void startCountdown(Player player) {
-        // Debug message
-        Bukkit.getLogger().info("[COUNTDOWN] Starting countdown for " + player.getName());
-        
-        // Close any existing inventory
+        // Close current inventory
         player.closeInventory();
         
         // Play initial sound
-        try {
-            player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, 1.0f);
-            Bukkit.getLogger().info("[COUNTDOWN] Played initial sound");
-        } catch (Exception e) {
-            Bukkit.getLogger().warning("[COUNTDOWN] Sound error: " + e.getMessage());
-        }
-
-        // Send initial title
-        try {
-            TitleAPI.sendTitle(player, 10, 40, 10, "§e§l10", "§aGame starting soon...");
-            Bukkit.getLogger().info("[COUNTDOWN] Sent initial title");
-        } catch (Exception e) {
-            Bukkit.getLogger().warning("[COUNTDOWN] Title error: " + e.getMessage());
-        }
-
+        player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, 1.0f);
+        
         // Set initial XP
         player.setLevel(10);
         player.setExp(1.0f);
-        Bukkit.getLogger().info("[COUNTDOWN] Set initial XP");
-
-        // Create countdown inventory
-        Inventory countdownMenu = Bukkit.createInventory(null, 9, "§cStarting Game...");
         
-        // Add cancel item
-        ItemStack cancelItem = new ItemStack(CANCEL_ITEM);
-        ItemMeta cancelMeta = cancelItem.getItemMeta();
-        cancelMeta.setDisplayName("§c§lCANCEL");
-        cancelItem.setItemMeta(cancelMeta);
-        countdownMenu.setItem(4, cancelItem);
+        // Open the main menu with cancel button
+        openCountdownMenu(player);
         
-        // Open the inventory
-        player.openInventory(countdownMenu);
-        Bukkit.getLogger().info("[COUNTDOWN] Opened countdown menu");
-
         // Create and track the countdown task
         BukkitRunnable countdown = new BukkitRunnable() {
-            int count = 9; // Starts from 9 because we already showed 10
+            int count = 10;
             
             @Override
             public void run() {
                 if (!player.isOnline()) {
-                    Bukkit.getLogger().info("[COUNTDOWN] Player left - cancelling");
                     activeCountdowns.remove(player.getUniqueId());
                     this.cancel();
                     return;
@@ -231,12 +202,7 @@ public class gameconfig implements Listener {
                 if (count > 0) {
                     // Update title
                     String subtitle = count <= 5 ? "§eStarting soon!" : "§aGet ready...";
-                    try {
-                        TitleAPI.sendTitle(player, 0, 20, 0, "§e§l" + count, subtitle);
-                        Bukkit.getLogger().info("[COUNTDOWN] Count: " + count);
-                    } catch (Exception e) {
-                        Bukkit.getLogger().warning("[COUNTDOWN] Title update error: " + e.getMessage());
-                    }
+                    TitleAPI.sendTitle(player, 0, 20, 0, "§e§l" + count, subtitle);
                     
                     // Update sound (higher pitch for last 5 seconds)
                     float pitch = count <= 5 ? 1.0f + (5 - count) * 0.2f : 1.0f;
@@ -249,17 +215,15 @@ public class gameconfig implements Listener {
                     count--;
                 } else {
                     // Countdown finished
-                    Bukkit.getLogger().info("[COUNTDOWN] Countdown complete - starting game");
-                    
-                    // Close inventory
                     player.closeInventory();
-                    
-                    // Start the game
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "start");
                     
                     // Clean up
                     activeCountdowns.remove(player.getUniqueId());
                     this.cancel();
+                    
+                    // Restore original menu
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> openMenu(player), 1L);
                 }
             }
         };
@@ -268,6 +232,21 @@ public class gameconfig implements Listener {
         activeCountdowns.put(player.getUniqueId(), countdown);
         countdown.runTaskTimer(plugin, 20L, 20L); // 1 second intervals
     }
+    private void openCountdownMenu(Player player) {
+        Inventory menu = Bukkit.createInventory(null, 36, ChatColor.GRAY + "Game Configuration");
+        
+        // Copy all items from original menu
+        openMenu(player); // This will populate the menu
+        
+        // Replace the emerald block with redstone block
+        ItemStack cancelItem = new ItemStack(Material.REDSTONE_BLOCK);
+        ItemMeta cancelMeta = cancelItem.getItemMeta();
+        cancelMeta.setDisplayName("§c§lCANCEL COUNTDOWN");
+        cancelItem.setItemMeta(cancelMeta);
+        menu.setItem(31, cancelItem); // Same slot as the original emerald block
+        
+        player.openInventory(menu);
+    }
     private void cancelCountdown(Player player) {
         BukkitRunnable countdown = activeCountdowns.remove(player.getUniqueId());
         if (countdown != null) {
@@ -275,12 +254,9 @@ public class gameconfig implements Listener {
             player.sendMessage(ChatColor.RED + "Countdown cancelled!");
             player.setLevel(0);
             player.setExp(0);
-            try {
-                TitleAPI.clearTitle(player);
-            } catch (Exception e) {
-                Bukkit.getLogger().warning("[ERROR] Failed to clear title: " + e.getMessage());
-            }
-            player.closeInventory();
+            TitleAPI.clearTitle(player);
+            
+            // Reopen the original menu
             Bukkit.getScheduler().runTaskLater(plugin, () -> openMenu(player), 1L);
         }
     }
@@ -1789,34 +1765,20 @@ public class gameconfig implements Listener {
                 player.sendMessage(ChatColor.YELLOW + "Spectator mode: " + 
                     (spectatorModeEnabled ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED"));
                 openMenu(player);
-            } else if (event.getSlot() == 31) { // Emerald Block (Start)
-                    event.setCancelled(true);
-                    
-                    Bukkit.getLogger().info("[DEBUG] Start countdown initiated by " + player.getName());
-                    
-                    // Close current inventory first
-                    player.closeInventory();
-                    
-                    // Start countdown with slight delay to prevent inventory conflicts
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        try {
-                            startCountdown(player);
-                        } catch (Exception e) {
-                            player.sendMessage(ChatColor.RED + "Failed to start countdown!");
-                            Bukkit.getLogger().severe("Countdown error: " + e.getMessage());
-                            e.printStackTrace();
-                        }
-                    }, 1L);
-                }
-            
-
-        }  else if (event.getView().getTitle().equals("Starting Game...")) {
-            event.setCancelled(true);
-            if (event.getCurrentItem() != null && 
-                event.getCurrentItem().getType() == Material.REDSTONE_BLOCK && 
-                event.getCurrentItem().getItemMeta().getDisplayName().equals("§c§lCANCEL")) {
-                cancelCountdown((Player) event.getWhoClicked());
             }
+            ItemStack clicked = event.getCurrentItem();
+            if (event.getSlot() == 31 && clicked.getType() == Material.EMERALD_BLOCK) {
+                Bukkit.getLogger().info("[DEBUG] Emerald block clicked - starting countdown");
+                startCountdown(player);
+                return;
+            }
+            if (clicked.getType() == Material.REDSTONE_BLOCK && 
+                    clicked.getItemMeta().getDisplayName().equals("§c§lCANCEL COUNTDOWN")) {
+                    cancelCountdown(player);
+                    return;
+                }
+
+        
         }
             }
 
