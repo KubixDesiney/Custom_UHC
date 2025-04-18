@@ -169,29 +169,40 @@ public class gameconfig implements Listener {
         player.openInventory(menu);
     }
     private final Map<UUID, BukkitRunnable> activeCountdowns = new HashMap<>();
-    private boolean countdownActive = false;
+    private static final Sound COUNTDOWN_SOUND = Sound.valueOf("BLOCK_NOTE_PLING");
+    private static final Material START_ITEM = Material.EMERALD_BLOCK;
+    private static final Material CANCEL_ITEM = Material.REDSTONE_BLOCK;
+    private static final int START_SLOT = 31; // Verify this is correct for your menu
     private void startCountdown(Player player) {
+        // Debug message
+        Bukkit.getLogger().info("[DEBUG] Starting countdown for " + player.getName());
+        
         // Close inventory immediately
         player.closeInventory();
         
         // Play initial sound
-        Sound sound = Sound.valueOf("BLOCK_NOTE_PLING");
-        player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+        player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, 1.0f);
         
         // Send initial title
-        TitleAPI.sendTitle(player, 0, 20, 0, "10", "§eBe ready...");
+        try {
+            TitleAPI.sendTitle(player, 0, 20, 0, "10", "§eBe ready...");
+        } catch (Exception e) {
+            Bukkit.getLogger().warning("[ERROR] Failed to send title: " + e.getMessage());
+        }
         
         // Set initial XP level
         player.setLevel(10);
         player.setExp(1.0f);
         
         // Create new inventory with cancel option
-        Inventory countdownMenu = Bukkit.createInventory(null, 9, "Starting Game...");
-        ItemStack cancelItem = new ItemStack(Material.REDSTONE_BLOCK);
+        Inventory countdownMenu = Bukkit.createInventory(null, 9, "§cStarting Game...");
+        ItemStack cancelItem = new ItemStack(CANCEL_ITEM);
         ItemMeta cancelMeta = cancelItem.getItemMeta();
         cancelMeta.setDisplayName("§c§lCANCEL");
         cancelItem.setItemMeta(cancelMeta);
         countdownMenu.setItem(4, cancelItem);
+        
+        // Open the new inventory
         player.openInventory(countdownMenu);
         
         // Create and track the countdown task
@@ -200,20 +211,27 @@ public class gameconfig implements Listener {
             
             @Override
             public void run() {
+                if (!player.isOnline()) {
+                    activeCountdowns.remove(player.getUniqueId());
+                    this.cancel();
+                    return;
+                }
+                
                 if (count > 0) {
+                    // Debug message
+                    Bukkit.getLogger().info("[COUNTDOWN] " + player.getName() + " - " + count);
+                    
                     // Update title
-                    if (count <= 5) {
-                        // For counts 5 and below, make the sound pitch higher
-                        float pitch = 1.0f + (5 - count) * 0.2f;
-                        player.playSound(player.getLocation(), sound, 1.0f, pitch);
-                        
-                        TitleAPI.sendTitle(player, 0, 20, 0, String.valueOf(count), 
-                            count == 1 ? "§aLet's go!" : "§eBe ready");
-                    } else {
-                        // For counts above 5, normal sound
-                        player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
-                        TitleAPI.sendTitle(player, 0, 20, 0, String.valueOf(count), "§eBe ready...");
+                    String subtitle = count == 1 ? "§aLet's go!" : "§eBe ready" + (count > 5 ? "..." : "");
+                    try {
+                        TitleAPI.sendTitle(player, 0, 20, 0, String.valueOf(count), subtitle);
+                    } catch (Exception e) {
+                        Bukkit.getLogger().warning("[ERROR] Failed to send title: " + e.getMessage());
                     }
+                    
+                    // Update sound (higher pitch for last 5 seconds)
+                    float pitch = count <= 5 ? 1.0f + (5 - count) * 0.2f : 1.0f;
+                    player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, pitch);
                     
                     // Update XP bar
                     player.setLevel(count);
@@ -222,6 +240,7 @@ public class gameconfig implements Listener {
                     count--;
                 } else {
                     // Countdown finished - start the game
+                    Bukkit.getLogger().info("[COUNTDOWN] Starting game for " + player.getName());
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "start");
                     activeCountdowns.remove(player.getUniqueId());
                     this.cancel();
@@ -240,9 +259,13 @@ public class gameconfig implements Listener {
             player.sendMessage(ChatColor.RED + "Countdown cancelled!");
             player.setLevel(0);
             player.setExp(0);
-            TitleAPI.clearTitle(player);
+            try {
+                TitleAPI.clearTitle(player);
+            } catch (Exception e) {
+                Bukkit.getLogger().warning("[ERROR] Failed to clear title: " + e.getMessage());
+            }
             player.closeInventory();
-            openMenu(player); // Reopen main menu
+            Bukkit.getScheduler().runTaskLater(plugin, () -> openMenu(player), 1L);
         }
     }
     private boolean spectatorModeEnabled = false;
