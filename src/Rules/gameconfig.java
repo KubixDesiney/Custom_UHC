@@ -169,6 +169,7 @@ public class gameconfig implements Listener {
         player.openInventory(menu);
     }
     private static final int START_SLOT = 31;
+    private Player countdownInitiator = null;
     private BukkitRunnable globalCountdown = null;
     private boolean countdownActive = false;
     private int remainingSeconds = 10;
@@ -180,6 +181,7 @@ public class gameconfig implements Listener {
         
         countdownActive = true;
         remainingSeconds = 10;
+        countdownInitiator = starter;
         
         // Play sound for all players
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -203,7 +205,17 @@ public class gameconfig implements Listener {
             public void run() {
                 if (remainingSeconds <= 0) {
                     // Countdown finished
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "start");
+                    if (countdownInitiator != null && countdownInitiator.isOnline()) {
+                        countdownInitiator.performCommand("start");
+                    } else { 
+                        Player anyOp = Bukkit.getOnlinePlayers().stream()
+                                .filter(Player::isOp)
+                                .findFirst()
+                                .orElse(null);
+                            if (anyOp != null) {
+                                anyOp.performCommand("start");
+                            }
+                    }
                     resetCountdown();
                     return;
                 }
@@ -248,6 +260,10 @@ public class gameconfig implements Listener {
 
     private void cancelCountdown(Player canceller) {
         if (!countdownActive) return;
+        String initiatorName = countdownInitiator != null ? countdownInitiator.getName() : "someone";
+        Bukkit.broadcastMessage(ChatColor.RED + "Countdown started by " + initiatorName + 
+                              " was cancelled by " + canceller.getName() + "!");
+        
         
         resetCountdown();
         
@@ -273,8 +289,9 @@ public class gameconfig implements Listener {
             globalCountdown = null;
         }
         countdownActive = false;
-        playersInCountdown.clear();
+        countdownInitiator = null; // Clear the initiator
     }
+
     private boolean spectatorModeEnabled = false;
 
     // Add getter method
