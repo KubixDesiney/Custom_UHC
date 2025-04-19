@@ -167,7 +167,7 @@ public class TeamSelectionSystem implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        if (Gamestatus.getStatus() != 1) { 
+        if (Gamestatus.getStatus() != 1 && gameconfig.getTeamSize() > 1) { 
             giveSelectionBanner(event.getPlayer());
         }
     }
