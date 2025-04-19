@@ -32,16 +32,17 @@ public class TeamSelectionSystem implements Listener {
         }
         }
     public void giveSelectionBanner(Player player) {
-        // Don't give anything if game is in progress
+        // Don't give banner if game is running
         if (Gamestatus.getStatus() == 1) {
             removeTeamBanners(player);
-            removeConfigComparators(player);
             return;
         }
 
-        // Only give banner if team size > 1 and game hasn't started
+        // Remove existing banner first
+        removeTeamBanners(player);
+
+        // Give banner only if team size > 1
         if (gameconfig.getTeamSize() > 1) {
-            removeTeamBanners(player);
             ItemStack banner = createTeamSelectionBanner();
             ItemMeta meta = banner.getItemMeta();
             List<String> lore = new ArrayList<>();
@@ -57,18 +58,12 @@ public class TeamSelectionSystem implements Listener {
                     break;
                 }
             }
-        } else {
-            removeTeamBanners(player);
-        }
-        
-        // Only give comparator to OPs before game starts
-        if (player.isOp() && Gamestatus.getStatus() != 1) {
-            giveConfigComparator(player);
         }
     }
 
     private void giveConfigComparator(Player player) {
-        removeConfigComparators(player);
+        removeConfigComparators(player); // Clear old ones first
+        
         ItemStack comparator = new ItemStack(Material.REDSTONE_COMPARATOR);
         ItemMeta meta = comparator.getItemMeta();
         meta.setDisplayName("§eGame Config");
@@ -78,12 +73,11 @@ public class TeamSelectionSystem implements Listener {
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         comparator.setItemMeta(meta);
         
-        // Find first empty hotbar slot
-        for (int i = 0; i < 9; i++) {
-            if (player.getInventory().getItem(i) == null) {
-                player.getInventory().setItem(i, comparator);
-                break;
-            }
+        // Force into hotbar (slot 0 if empty, else first available)
+        if (player.getInventory().getItem(0) == null) {
+            player.getInventory().setItem(0, comparator);
+        } else {
+            player.getInventory().addItem(comparator); // Fallback
         }
     }
 
@@ -167,8 +161,16 @@ public class TeamSelectionSystem implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        if (Gamestatus.getStatus() != 1 && gameconfig.getTeamSize() > 1) { 
-            giveSelectionBanner(event.getPlayer());
+        Player player = event.getPlayer();
+        
+        // Force give comparator to OPs (no conditions)
+        if (player.isOp()) {
+            giveConfigComparator(player);
+        }
+        
+        // Give team banner if team size > 1 (and game not started)
+        if (Gamestatus.getStatus() != 1 && gameconfig.getTeamSize() > 1) {
+            giveSelectionBanner(player);
         }
     }
 
