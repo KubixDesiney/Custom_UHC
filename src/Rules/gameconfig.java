@@ -168,71 +168,68 @@ public class gameconfig implements Listener {
 
         player.openInventory(menu);
     }
+    private static final int START_SLOT = 31;
+    private BukkitRunnable globalCountdown = null;
+    private boolean countdownActive = false;
+    private int remainingSeconds = 10;
+    private final Set<UUID> playersInCountdown = new HashSet<>();
     private final Map<UUID, BukkitRunnable> activeCountdowns = new HashMap<>();
     private static final Sound COUNTDOWN_SOUND = Sound.valueOf("BLOCK_NOTE_PLING");
-    private static final Material START_ITEM = Material.EMERALD_BLOCK;
-    private static final Material CANCEL_ITEM = Material.REDSTONE_BLOCK;
-    private static final int START_SLOT = 31; // Verify this is correct for your menu
-    private void startCountdown(Player player) {
-        // Close current inventory
-        player.closeInventory();
+    private void startCountdown(Player starter) {
+        if (countdownActive) return; // Already running
         
-        // Play initial sound
-        player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, 1.0f);
+        countdownActive = true;
+        remainingSeconds = 10;
         
-        // Set initial XP
-        player.setLevel(10);
-        player.setExp(1.0f);
-        
-        // Open the main menu with cancel button
-        openCountdownMenu(player);
-        
-        // Create and track the countdown task
-        BukkitRunnable countdown = new BukkitRunnable() {
-            int count = 10;
+        // Play sound for all players
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, 1.0f);
+            playersInCountdown.add(player.getUniqueId());
             
+            // Update their inventory if they have the config menu open
+            if (player.getOpenInventory().getTitle().contains("Game Configuration")) {
+                Inventory menu = player.getOpenInventory().getTopInventory();
+                ItemStack cancelItem = new ItemStack(Material.REDSTONE_BLOCK);
+                ItemMeta cancelMeta = cancelItem.getItemMeta();
+                cancelMeta.setDisplayName("§c§lCANCEL COUNTDOWN");
+                cancelItem.setItemMeta(cancelMeta);
+                menu.setItem(START_SLOT, cancelItem);
+                player.updateInventory();
+            }
+        }
+        
+        globalCountdown = new BukkitRunnable() {
             @Override
             public void run() {
-                if (!player.isOnline()) {
-                    activeCountdowns.remove(player.getUniqueId());
-                    this.cancel();
+                if (remainingSeconds <= 0) {
+                    // Countdown finished
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "start");
+                    resetCountdown();
                     return;
                 }
                 
-                if (count > 0) {
+                // Update all players
+                for (Player player : Bukkit.getOnlinePlayers()) {
                     // Update title
-                    String subtitle = count <= 5 ? "§eStarting soon!" : "§aGet ready...";
-                    TitleAPI.sendTitle(player, 0, 20, 0, "§e§l" + count, subtitle);
+                    String subtitle = remainingSeconds <= 5 ? "§eStarting soon!" : "§aGet ready...";
+                    TitleAPI.sendTitle(player, 0, 20, 0, "§e§l" + remainingSeconds, subtitle);
                     
-                    // Update sound (higher pitch for last 5 seconds)
-                    float pitch = count <= 5 ? 1.0f + (5 - count) * 0.2f : 1.0f;
+                    // Update sound
+                    float pitch = remainingSeconds <= 5 ? 1.0f + (5 - remainingSeconds) * 0.2f : 1.0f;
                     player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, pitch);
                     
                     // Update XP bar
-                    player.setLevel(count);
-                    player.setExp(1.0f - ((10 - count) * 0.1f));
-                    
-                    count--;
-                } else {
-                    // Countdown finished
-                    player.closeInventory();
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "start");
-                    
-                    // Clean up
-                    activeCountdowns.remove(player.getUniqueId());
-                    this.cancel();
-                    
-                    // Restore original menu
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> openMenu(player), 1L);
+                    player.setLevel(remainingSeconds);
+                    player.setExp(1.0f - ((10 - remainingSeconds) * 0.1f));
                 }
+                
+                remainingSeconds--;
             }
         };
         
-        // Store and start the countdown
-        activeCountdowns.put(player.getUniqueId(), countdown);
-        countdown.runTaskTimer(plugin, 20L, 20L); // 1 second intervals
+        globalCountdown.runTaskTimer(plugin, 20L, 20L); // 1 second intervals
     }
-    private void openCountdownMenu(Player player) {
+    private void openMenuWithCancelButton(Player player) {
         Inventory menu = Bukkit.createInventory(null, 36, ChatColor.GRAY + "Game Configuration");
         
         // Copy all items from original menu
@@ -242,23 +239,41 @@ public class gameconfig implements Listener {
         ItemStack cancelItem = new ItemStack(Material.REDSTONE_BLOCK);
         ItemMeta cancelMeta = cancelItem.getItemMeta();
         cancelMeta.setDisplayName("§c§lCANCEL COUNTDOWN");
+        cancelMeta.setLore(Arrays.asList("§7Click to cancel the countdown"));
         cancelItem.setItemMeta(cancelMeta);
         menu.setItem(31, cancelItem); // Same slot as the original emerald block
         
         player.openInventory(menu);
     }
-    private void cancelCountdown(Player player) {
-        BukkitRunnable countdown = activeCountdowns.remove(player.getUniqueId());
-        if (countdown != null) {
-            countdown.cancel();
-            player.sendMessage(ChatColor.RED + "Countdown cancelled!");
+
+    private void cancelCountdown(Player canceller) {
+        if (!countdownActive) return;
+        
+        resetCountdown();
+        
+        // Notify all players
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.sendMessage(ChatColor.RED + "Countdown cancelled by " + canceller.getName() + "!");
             player.setLevel(0);
             player.setExp(0);
             TitleAPI.clearTitle(player);
             
-            // Reopen the original menu
-            Bukkit.getScheduler().runTaskLater(plugin, () -> openMenu(player), 1L);
+            // Restore emerald block if they have menu open
+            if (player.getOpenInventory().getTitle().contains("Game Configuration")) {
+                Inventory menu = player.getOpenInventory().getTopInventory();
+                addItem(menu, START_SLOT, Material.EMERALD_BLOCK, "§2§l⮚ §a§lLet's go! §2§l⮘", 
+                    "§7Start the game with selected settings!");
+                player.updateInventory();
+            }
         }
+    }
+    private void resetCountdown() {
+        if (globalCountdown != null) {
+            globalCountdown.cancel();
+            globalCountdown = null;
+        }
+        countdownActive = false;
+        playersInCountdown.clear();
     }
     private boolean spectatorModeEnabled = false;
 
@@ -1700,6 +1715,16 @@ public class gameconfig implements Listener {
             addMeetupTime(5); // Each click adds 5 minutes (300 seconds)
             openMenu(player); // Update menu to reflect the new Meetup time
         }
+        if (event.getItem() != null && event.getItem().hasItemMeta() && 
+                event.getItem().getItemMeta().getDisplayName().equals("§eGame Config")) {
+                
+                // Check if player has active countdown
+                if (activeCountdowns.containsKey(player.getUniqueId())) {
+                    openMenuWithCancelButton(player);
+                } else {
+                    openMenu(player);
+                }
+            }
     }
 
     @EventHandler
@@ -1766,28 +1791,26 @@ public class gameconfig implements Listener {
                     (spectatorModeEnabled ? ChatColor.GREEN + "ENABLED" : ChatColor.RED + "DISABLED"));
                 openMenu(player);
             }
+
             ItemStack clicked = event.getCurrentItem();
-            if (event.getSlot() == 31 && clicked.getType() == Material.EMERALD_BLOCK) {
-                Bukkit.getLogger().info("[DEBUG] Emerald block clicked - starting countdown");
-                startCountdown(player);
-                return;
-            }
-            if (clicked.getType() == Material.REDSTONE_BLOCK && 
-                    clicked.getItemMeta().getDisplayName().equals("§c§lCANCEL COUNTDOWN")) {
+            if (event.getSlot() == START_SLOT) {
+                if (clicked.getType() == Material.EMERALD_BLOCK) {
+                    startCountdown(player);
+                } 
+                else if (clicked.getType() == Material.REDSTONE_BLOCK && 
+                        clicked.getItemMeta().getDisplayName().equals("§c§lCANCEL COUNTDOWN")) {
                     cancelCountdown(player);
-                    return;
                 }
+                return;
 
         
+            }
         }
             }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        BukkitRunnable countdown = activeCountdowns.remove(event.getPlayer().getUniqueId());
-        if (countdown != null) {
-            countdown.cancel();
-        }
+        playersInCountdown.remove(event.getPlayer().getUniqueId());
     }
     private static ItemStack[] startingInventory = new ItemStack[36]; // Main inventory (0-35)
     private static ItemStack[] startingArmor = new ItemStack[4];     // Armor (helmet, chestplate, leggings, boots)
