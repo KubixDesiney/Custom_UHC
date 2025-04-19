@@ -185,6 +185,7 @@ public class gameconfig implements Listener {
         
         // Play sound for all players
         for (Player player : Bukkit.getOnlinePlayers()) {
+            // Play initial sound at normal pitch for 10 seconds
             player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, 1.0f);
             playersInCountdown.add(player.getUniqueId());
             
@@ -226,9 +227,11 @@ public class gameconfig implements Listener {
                     String subtitle = remainingSeconds <= 5 ? "§eStarting soon!" : "§aGet ready...";
                     TitleAPI.sendTitle(player, 0, 20, 0, "§e§l" + remainingSeconds, subtitle);
                     
-                    // Update sound
-                    float pitch = remainingSeconds <= 5 ? 1.0f + (5 - remainingSeconds) * 0.2f : 1.0f;
-                    player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, pitch);
+                    // Update sound - only play for 5-1 with descending pitch
+                    if (remainingSeconds <= 5) {
+                        float pitch = 1.0f - (5 - remainingSeconds) * 0.2f; // 5=1.0, 4=0.8, 3=0.6, 2=0.4, 1=0.2
+                        player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, pitch);
+                    }
                     
                     // Update XP bar
                     player.setLevel(remainingSeconds);
