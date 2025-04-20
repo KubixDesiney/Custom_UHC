@@ -201,11 +201,21 @@ public class gameconfig implements Listener {
             }
         }
         
+        // Send initial "Wakey wakey" title
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            TitleAPI.sendTitle(player, 0, 40, 0, "§e§l10", "§6Wakey wakey");
+        }
+        
         globalCountdown = new BukkitRunnable() {
             @Override
             public void run() {
                 if (remainingSeconds <= 0) {
-                    // Countdown finished
+                    // Countdown finished - send "GO" title
+                    for (Player player : Bukkit.getOnlinePlayers()) {
+                        TitleAPI.sendTitle(player, 0, 20, 10, "§a§lGO", "§2Let's go!");
+                        player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, 2.0f); // High pitch
+                    }
+                    
                     if (countdownInitiator != null && countdownInitiator.isOnline()) {
                         countdownInitiator.performCommand("start");
                     } else { 
@@ -221,19 +231,40 @@ public class gameconfig implements Listener {
                     return;
                 }
                 
-                // Update all players
-                for (Player player : Bukkit.getOnlinePlayers()) {
-                    // Update title
-                    String subtitle = remainingSeconds <= 5 ? "§eStarting soon!" : "§aGet ready...";
-                    TitleAPI.sendTitle(player, 0, 20, 0, "§e§l" + remainingSeconds, subtitle);
+                // Custom titles for specific seconds
+                if (remainingSeconds <= 5) {
+                    String title = "§e§l" + remainingSeconds;
+                    String subtitle = "";
                     
-                    // Update sound - only play for 5-1 with descending pitch
-                    if (remainingSeconds <= 5) {
-                        float pitch = 1.0f - (5 - remainingSeconds) * 0.2f; // 5=1.0, 4=0.8, 3=0.6, 2=0.4, 1=0.2
-                        player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, pitch);
+                    switch (remainingSeconds) {
+                        case 5:
+                            subtitle = "§6Get Ready";
+                            break;
+                        case 4:
+                            subtitle = "§cSharpen your swords";
+                            break;
+                        case 3:
+                            subtitle = "";
+                            break;
+                        case 2:
+                            subtitle = "§33asba lma7";
+                            break;
+                        case 1:
+                            subtitle = "§aGO";
+                            break;
                     }
                     
-                    // Update XP bar
+                    for (Player player : Bukkit.getOnlinePlayers()) {
+                        TitleAPI.sendTitle(player, 0, 20, 0, title, subtitle);
+                        
+                        // Play sound with increasing pitch (1.0 at 5, up to 2.0 at 1)
+                        float pitch = 1.0f + (5 - remainingSeconds) * 0.25f;
+                        player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, pitch);
+                    }
+                }
+                
+                // Update XP bar for all seconds
+                for (Player player : Bukkit.getOnlinePlayers()) {
                     player.setLevel(remainingSeconds);
                     player.setExp(1.0f - ((10 - remainingSeconds) * 0.1f));
                 }

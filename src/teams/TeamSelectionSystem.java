@@ -163,12 +163,10 @@ public class TeamSelectionSystem implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         
-        // Force give comparator to OPs (no conditions)
         if (player.isOp()) {
             giveConfigComparator(player);
         }
         
-        // Give team banner if team size > 1 (and game not started)
         if (Gamestatus.getStatus() != 1 && gameconfig.getTeamSize() > 1) {
             giveSelectionBanner(player);
         }
