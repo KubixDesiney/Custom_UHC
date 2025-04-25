@@ -101,6 +101,7 @@ public class gameconfig implements Listener {
     public static long getGameElapsedTime() {
     	return System.currentTimeMillis() -gameStartTime;
     }
+    
     private SwitchUHC switchUHC;
     private static int staticSwitchTime = 0;
     private static int switchTime = 0;
