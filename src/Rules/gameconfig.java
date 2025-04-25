@@ -29,9 +29,8 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.event.inventory.BrewEvent;
-import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
@@ -47,10 +46,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.Potion;
-import org.bukkit.scheduler.BukkitRunnable;
-
 import com.connorlinfoot.titleapi.TitleAPI;
 
 import decoration.ScoreboardHandler;
@@ -73,6 +69,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public class gameconfig implements Listener {
+	
     private static String gameName = "HOST";
     private static gameconfig instance;
     private TeamSelectionSystem teamSelectionSystem;
@@ -114,6 +111,7 @@ public class gameconfig implements Listener {
     UHCTeamManager manager = ((main) Bukkit.getPluginManager().getPlugin("Custom_UHC")).getTeamManager();
     private final main plugin; 
     public gameconfig(main plugin) {
+        startDisplay();
     	spectatorModeEnabled = plugin.getConfig().getBoolean("spectator_mode", false);
     	instance=this;
     	this.switchUHC = new SwitchUHC(plugin.getTeamManager());
@@ -128,7 +126,9 @@ public class gameconfig implements Listener {
         dropRates.put("XP_BOTTLE", 0);    // 0% XP boost
         dropRates.put("ENDER_PEARL", 0);  // 0% bonus
     }
-
+    public void onDisable() {
+        stopDisplay();
+    }
 
     public void openMenu(Player player) {
         Inventory menu = Bukkit.createInventory(null, 36, ChatColor.GRAY + "Game Configuration");
@@ -168,6 +168,7 @@ public class gameconfig implements Listener {
 
         player.openInventory(menu);
     }
+
     private static final int START_SLOT = 31;
     private Player countdownInitiator = null;
     private BukkitRunnable globalCountdown = null;
@@ -176,9 +177,124 @@ public class gameconfig implements Listener {
     private final Set<UUID> playersInCountdown = new HashSet<>();
     private final Map<UUID, BukkitRunnable> activeCountdowns = new HashMap<>();
     private static final Sound COUNTDOWN_SOUND = Sound.valueOf("BLOCK_NOTE_PLING");
-    private void startCountdown(Player starter) {
-        if (countdownActive) return; // Already running
+    private int displayTaskId = -1;
+    private void startDisplay() {
+        if (displayTaskId != -1) return;
         
+        displayTaskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, new Runnable() {
+            @Override
+            public void run() {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    if (countdownActive) {
+                        // Simple chat message for countdown (more reliable in 1.12.2)
+                        player.sendMessage(ChatColor.GOLD + "§6§l• §e§lStarting in §a" + remainingSeconds + " §6§l•");
+                    } else {
+                        // Action bar message for waiting
+                        String opName = Bukkit.getOnlinePlayers().stream()
+                                .filter(Player::isOp)
+                                .findFirst()
+                                .map(Player::getName)
+                                .orElse("an admin");
+                        sendActionBar(player, "§4§l• §c§lWaiting for §e§l" + opName + " §4§l•");
+                    }
+                }
+            }
+        }, 0L, 20L);
+    }
+
+    private void sendTitle(Player player, String title, String subtitle) {
+        try {
+            Class<?> chatTitle = getNMSClass("PacketPlayOutTitle");
+            Class<?> chatSerializer = getNMSClass("IChatBaseComponent$ChatSerializer");
+            Class<?> action = getNMSClass("PacketPlayOutTitle$EnumTitleAction");
+            
+            // Times packet
+            Object timesPacket = chatTitle.getConstructor(
+                action, getNMSClass("IChatBaseComponent"), 
+                int.class, int.class, int.class)
+                .newInstance(
+                    action.getField("TIMES").get(null),
+                    null,
+                    10, // Fade in
+                    40, // Stay
+                    10  // Fade out
+                );
+            
+            // Title packet
+            Object titleComponent = chatSerializer.getMethod("a", String.class)
+                .invoke(null, "{\"text\":\"" + title + "\"}");
+            Object titlePacket = chatTitle.getConstructor(
+                action, getNMSClass("IChatBaseComponent"))
+                .newInstance(
+                    action.getField("TITLE").get(null),
+                    titleComponent
+                );
+            
+            // Subtitle packet
+            Object subtitleComponent = chatSerializer.getMethod("a", String.class)
+                .invoke(null, "{\"text\":\"" + subtitle + "\"}");
+            Object subtitlePacket = chatTitle.getConstructor(
+                action, getNMSClass("IChatBaseComponent"))
+                .newInstance(
+                    action.getField("SUBTITLE").get(null),
+                    subtitleComponent
+                );
+            
+            // Send packets
+            Object handle = player.getClass().getMethod("getHandle").invoke(player);
+            Object connection = handle.getClass().getField("playerConnection").get(handle);
+            connection.getClass().getMethod("sendPacket", getNMSClass("Packet"))
+                .invoke(connection, timesPacket);
+            connection.getClass().getMethod("sendPacket", getNMSClass("Packet"))
+                .invoke(connection, titlePacket);
+            connection.getClass().getMethod("sendPacket", getNMSClass("Packet"))
+                .invoke(connection, subtitlePacket);
+        } catch (Exception e) {
+            // Fallback to chat messages if reflection fails
+            if (!title.isEmpty()) player.sendMessage(title);
+            if (!subtitle.isEmpty()) player.sendMessage(subtitle);
+        }
+    }
+    private void sendActionBar(Player player, String message) {
+        try {
+            Class<?> chatSerializer = getNMSClass("IChatBaseComponent$ChatSerializer");
+            Class<?> packetClass = getNMSClass("PacketPlayOutChat");
+            Class<?> componentClass = getNMSClass("IChatBaseComponent");
+            
+            Object component = chatSerializer.getMethod("a", String.class)
+                .invoke(null, "{\"text\":\"" + message + "\"}");
+            Object packet = packetClass.getConstructor(componentClass, byte.class)
+                .newInstance(component, (byte) 2);
+            
+            Object handle = player.getClass().getMethod("getHandle").invoke(player);
+            Object connection = handle.getClass().getField("playerConnection").get(handle);
+            connection.getClass().getMethod("sendPacket", getNMSClass("Packet"))
+                .invoke(connection, packet);
+        } catch (Exception e) {
+            // Fallback to chat message if reflection fails
+            player.sendMessage(message);
+        }
+    }
+    private Class<?> getNMSClass(String name) throws ClassNotFoundException {
+        String version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
+        return Class.forName("net.minecraft.server." + version + "." + name);
+    }
+
+    private void stopDisplay() {
+        if (displayTaskId != -1) {
+            Bukkit.getScheduler().cancelTask(displayTaskId);
+            displayTaskId = -1;
+        }
+        
+        // Clear displays for all players
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            sendTitle(player, "", ""); // Clear titles
+        }
+    }
+    
+    private void startCountdown(Player starter) {
+        if (countdownActive) return;
+        startDisplay(); // Already running
         countdownActive = true;
         remainingSeconds = 10;
         countdownInitiator = starter;
@@ -294,13 +410,12 @@ public class gameconfig implements Listener {
 
     private void cancelCountdown(Player canceller) {
         if (!countdownActive) return;
+        stopDisplay();
         String initiatorName = countdownInitiator != null ? countdownInitiator.getName() : "someone";
         Bukkit.broadcastMessage(ChatColor.RED + "Countdown started by " + initiatorName + 
                               " was cancelled by " + canceller.getName() + "!");
         
-        
         resetCountdown();
-        
         // Notify all players
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.sendMessage(ChatColor.RED + "Countdown cancelled by " + canceller.getName() + "!");
@@ -316,6 +431,7 @@ public class gameconfig implements Listener {
                 player.updateInventory();
             }
         }
+        startDisplay();
     }
     private void resetCountdown() {
         if (globalCountdown != null) {
@@ -324,6 +440,7 @@ public class gameconfig implements Listener {
         }
         countdownActive = false;
         countdownInitiator = null; // Clear the initiator
+        startDisplay();
     }
 
     private boolean spectatorModeEnabled = false;
@@ -1858,7 +1975,10 @@ public class gameconfig implements Listener {
             }
         }
             }
-
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        startDisplay();
+    }
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         playersInCountdown.remove(event.getPlayer().getUniqueId());
@@ -2514,20 +2634,27 @@ public class gameconfig implements Listener {
 	    }.runTaskTimer(Bukkit.getPluginManager().getPlugin("Custom_UHC"), 0L, 20L);
 	}
      public void startGameTimer() {
+    	    gameStartTime = System.currentTimeMillis(); // Move this here to ensure accurate timing
+    	    
     	    new BukkitRunnable() {
     	        @Override
     	        public void run() {
     	            if (Gamestatus.getStatus() != 1) {
     	                cancel(); // Stop the timer if the game isn't in progress
+    	                return;
     	            }
 
-    	            // Update the scoreboard every second
+    	            // Calculate elapsed time accurately
+    	            long elapsedMillis = System.currentTimeMillis() - gameStartTime;
+    	            int elapsedSeconds = (int) (elapsedMillis / 1000);
+    	            
+    	            // Update scoreboard with accurate time
     	            ScoreboardHandler scoreboardHandler = new ScoreboardHandler(plugin, manager);
     	            for (Player player : Bukkit.getOnlinePlayers()) {
     	                scoreboardHandler.startGlobalScoreboardUpdater();
     	            }
     	        }
-    	    }.runTaskTimer(plugin, 0L, 20L); // Run every 20 ticks (1 second)
+    	    }.runTaskTimer(plugin, 0L, 20L); // Start immediately on the same tick
     	}
 
 
