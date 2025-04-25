@@ -27,7 +27,16 @@ public class UHCTeamManager {
        }
        return players;
    }
+    private final Map<UUID, Integer> playerKills = new HashMap<>();
 
+    public void incrementKillCount(Player player) {
+        UUID uuid = player.getUniqueId();
+        playerKills.put(uuid, playerKills.getOrDefault(uuid, 0) + 1);
+    }
+
+    public int getKillCount(Player player) {
+        return playerKills.getOrDefault(player.getUniqueId(), 0);
+    }
     public UHCTeamManager(JavaPlugin plugin, ConfigManager configManager) {
         this.configManager = configManager;
     	ScoreboardManager manager = Bukkit.getScoreboardManager();
@@ -233,5 +242,8 @@ public class UHCTeamManager {
             this.maxSize = maxSize;
             this.scoreboardTeam = scoreboardTeam;
         }
+    }
+    public ConfigManager getConfigManager() {
+        return this.configManager;
     }
 }

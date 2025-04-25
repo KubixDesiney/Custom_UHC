@@ -3,6 +3,7 @@ package events;
 import java.util.HashSet;
 import java.util.Set;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -96,37 +97,55 @@ public class events implements Listener {
 			}
 		}
 	}
-	  @EventHandler
-	  public void onPlayerDeath(PlayerDeathEvent event) {
-	      // Check if the entity is a player
-	      if (event.getEntity() instanceof Player) {
-	          Player player = (Player) event.getEntity();
-	          int dead = 0;
-	          dead = +1;
-	          int alive = Gamestatus.getAlive();
-	          Gamestatus.setAlive(alive - dead);
-	          
-	          // Get the location of the player's death
-	          Location deathLocation = player.getLocation();
-	          String teamName = teamManager.getPlayerTeam(player);
-	          EntityDamageEvent lastDamageEvent = player.getLastDamageCause();
-	          String causeMessage = (lastDamageEvent != null) ? getCauseMessage(lastDamageEvent.getCause()) : "unknown";
-	          // Create the custom death message
-	          String deathMessage = teamName + " " + player.getName() + " died by " + causeMessage;
+	@EventHandler
+	public void onPlayerDeath(PlayerDeathEvent event) {
+	    if (event.getEntity() instanceof Player) {
+	        Player player = (Player) event.getEntity();
+	        int dead = 0;
+	        dead = +1;
+	        int alive = Gamestatus.getAlive();
+	        Gamestatus.setAlive(alive - dead);
+	        
+	        Location deathLocation = player.getLocation();
+	        String teamName = teamManager.getPlayerTeam(player);
+	        String teamPrefix = teamManager.getConfigManager().getTeamPrefix(teamName);
+	        String coloredTeamPrefix = ChatColor.translateAlternateColorCodes('&', teamPrefix);
+	        
+	        EntityDamageEvent lastDamageEvent = player.getLastDamageCause();
+	        String deathMessage;
+	        
+	        if (lastDamageEvent instanceof EntityDamageByEntityEvent) {
+	            EntityDamageByEntityEvent entityEvent = (EntityDamageByEntityEvent) lastDamageEvent;
+	            if (entityEvent.getDamager() instanceof Player) {
+	                Player killer = (Player) entityEvent.getDamager();
+	                String killerTeamName = teamManager.getPlayerTeam(killer);
+	                String killerTeamPrefix = teamManager.getConfigManager().getTeamPrefix(killerTeamName);
+	                String coloredKillerPrefix = ChatColor.translateAlternateColorCodes('&', killerTeamPrefix);
+	                
+	                deathMessage = "UHC >> " + coloredTeamPrefix + player.getName() + 
+	                              " §ehas been killed by " + coloredKillerPrefix + killer.getName();
+	                
+	                // Increment killer's kill count (you'll need to implement this)
+	                // For example: incrementKillCount(killer);
+	            } else {
+	                deathMessage = "UHC >> " + coloredTeamPrefix + player.getName() + 
+	                              " §e" + getCauseMessage(lastDamageEvent.getCause());
+	            }
+	        } else {
+	            deathMessage = "UHC >> " + coloredTeamPrefix + player.getName() + 
+	                          " §e" + getCauseMessage(lastDamageEvent.getCause());
+	        }
 
-	          // Set the custom death message
-	          event.setDeathMessage(deathMessage);
+	        event.setDeathMessage(deathMessage);
 
-	          // Play the wither spawn sound at the death location
-	          Sound sound = Sound.valueOf("ENTITY_WITHER_SPAWN");
-	          for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-	              onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F);
-	          }
+	        Sound sound = Sound.valueOf("ENTITY_WITHER_SPAWN");
+	        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	            onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F);
+	        }
 
-	          // Spawn lightning without fire and damage
-	          spawnSafeLightning(deathLocation);
-	      }
-	  }
+	        spawnSafeLightning(deathLocation);
+	    }
+	}
 	  private void spawnSafeLightning(Location location) {
 		    // Store the location to track it
 		    lightningLocations.add(location);

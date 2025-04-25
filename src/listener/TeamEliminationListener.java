@@ -78,50 +78,68 @@ public class TeamEliminationListener implements Listener {
     private void checkForGameEnd(Player affectedPlayer) {
         if (Gamestatus.getStatus() != 1) return;
 
-        boolean isSoloMode = gameconfig.getTeamSize() == 1;
+        boolean isSoloMode = gameconfig.getTeamSize() < 2;
         int alivePlayers = 0;
         Player lastAlive = null;
 
+        // Count alive players (excluding those pending revive)
         for (Player player : Bukkit.getOnlinePlayers()) {
-            // Skip players who are pending revive
             if (safeMinerListener.isPendingRevive(player.getUniqueId())) {
                 continue;
             }
             
-            if (!player.isDead() && player.getGameMode() != GameMode.SPECTATOR) {
+            if (isPlayerAlive(player)) {
                 alivePlayers++;
                 lastAlive = player;
             }
         }
 
         if (isSoloMode) {
+            // In solo mode, end game if only 1 player remains
             if (alivePlayers <= 1) {
                 Player topKiller = plugin.getDamageTracker().getTopDamager();
                 Bukkit.getPluginManager().callEvent(new gameEndEvent(lastAlive, topKiller));
             }
         } else {
-            int aliveTeams = teamManager.getAliveTeamCount();
-            if (aliveTeams <= 1) {
-                String winningTeam = null;
-                Player winner = null;
+            // In team mode, count alive teams (teams that started with players)
+            int aliveTeams = 0;
+            String lastAliveTeam = null;
+            Player winner = null;
+            
+            // Check each team that had players at game start
+            for (String teamName : teamManager.getAllTeams()) {
+                if (teamManager.getPlayersInTeam(teamName).isEmpty()) {
+                    continue; // Skip teams that never had players
+                }
                 
-                if (aliveTeams == 1) {
-                    winningTeam = teamManager.getAliveTeams().iterator().next();
-                    for (Player player : Bukkit.getOnlinePlayers()) {
-                        if (winningTeam.equals(teamManager.getPlayerTeam(player)) && 
-                            !player.isDead() && 
-                            player.getGameMode() != GameMode.SPECTATOR &&
-                            !safeMinerListener.isPendingRevive(player.getUniqueId())) {
-                            winner = player;
-                            break;
-                        }
+                boolean teamAlive = false;
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    if (teamName.equals(teamManager.getPlayerTeam(player)) && 
+                        isPlayerAlive(player) &&
+                        !safeMinerListener.isPendingRevive(player.getUniqueId())) {
+                        teamAlive = true;
+                        winner = player;
+                        break;
                     }
                 }
                 
+                if (teamAlive) {
+                    aliveTeams++;
+                    lastAliveTeam = teamName;
+                }
+            }
+            
+            // End game if only 1 team remains with alive players
+            if (aliveTeams <= 1) {
                 Player topKiller = plugin.getDamageTracker().getTopDamager();
                 Bukkit.getPluginManager().callEvent(new gameEndEvent(winner, topKiller));
             }
         }
+    }
+    private boolean isPlayerAlive(Player player) {
+        return player != null && 
+               !player.isDead() && 
+               player.getGameMode() != GameMode.SPECTATOR;
     }
 }
 

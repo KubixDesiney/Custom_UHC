@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.entity.Player;
@@ -175,6 +176,9 @@ public class ScoreboardHandler implements Listener {
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (!p.isDead()) alivePlayers++;
         }
+        String teamName = teamManager.getPlayerTeam(player);
+        String teamPrefix = teamManager.getConfigManager().getTeamPrefix(teamName);
+        String coloredTeamPrefix = ChatColor.translateAlternateColorCodes('&', teamPrefix);
 
         // Update scoreboard with the new arrow and distance
         simpleScoreboard.add("§7--Players--", 16);
@@ -188,11 +192,12 @@ public class ScoreboardHandler implements Listener {
         simpleScoreboard.add("§7--Border size--", 9);
         simpleScoreboard.add("§b" + borderSize + " §7/ -§b" + borderSize, 8);
         simpleScoreboard.add("§7--info--", 7);
-        simpleScoreboard.add("§eTeam:"+teamManager.getPlayerTeam(player), 6);
-        simpleScoreboard.add("§eCenter: §b§l" + arrowText, 5); // Display the arrow and distance text
-        simpleScoreboard.add("§eMode: §b" + gameconfig.getTeamSize() + "§bvs" + gameconfig.getTeamSize(), 4);
-        simpleScoreboard.add("§7----------------", 3);
-        simpleScoreboard.add("§6mc.chancemaker.net", 2);
+        simpleScoreboard.add("§eKills: §b" + teamManager.getKillCount(player), 3);
+        simpleScoreboard.add("§eTeam: " + coloredTeamPrefix + teamName.replace("Heart", "").replace("Special", ""), 5);
+        simpleScoreboard.add("§eCenter: §b§l" + arrowText, 4); // Display the arrow and distance text
+        simpleScoreboard.add("§eMode: §b" + gameconfig.getTeamSize() + "§bvs" + gameconfig.getTeamSize(), 3);
+        simpleScoreboard.add("§7----------------", 2);
+        simpleScoreboard.add("§6mc.chancemaker.net", 1);
 
     }
 
