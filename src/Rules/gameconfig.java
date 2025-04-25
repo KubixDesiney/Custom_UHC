@@ -294,6 +294,7 @@ public class gameconfig implements Listener {
         }
     }
     
+    
     private void startCountdown(Player starter) {
         if (countdownActive) return;
         startDisplay(); // Already running
