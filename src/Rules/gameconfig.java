@@ -181,6 +181,7 @@ public class gameconfig implements Listener {
     private int displayTaskId = -1;
     private void startDisplay() {
         if (displayTaskId != -1) return;
+        main plugin = main.getInstance();
         
         displayTaskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, new Runnable() {
             @Override
@@ -296,6 +297,7 @@ public class gameconfig implements Listener {
     private void startCountdown(Player starter) {
         if (countdownActive) return;
         startDisplay(); // Already running
+        main plugin = main.getInstance();
         countdownActive = true;
         remainingSeconds = 10;
         countdownInitiator = starter;
