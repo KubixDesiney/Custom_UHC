@@ -130,9 +130,6 @@ public class main extends JavaPlugin {
     @Override
     public void onDisable() {
         // Clean up
-        if (gameConfig != null) {
-            gameConfig.onDisable();
-        }
         
         instance = null;
         saveConfig();
