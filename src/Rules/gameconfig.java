@@ -2,6 +2,7 @@ package Rules;
 
 
 import test.main;
+import utilities.CustomBossBar;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -174,6 +175,69 @@ public class gameconfig implements Listener {
     private final Set<UUID> playersInCountdown = new HashSet<>();
     private final Map<UUID, BukkitRunnable> activeCountdowns = new HashMap<>();
     private static final Sound COUNTDOWN_SOUND = Sound.valueOf("BLOCK_NOTE_PLING");
+    private CustomBossBar waitingBossBar;
+    private CustomBossBar countdownBossBar;
+    private final Map<Player, CustomBossBar> playerBossBars = new HashMap<>();
+    private void showWaitingBossBar(Player player, String hostName) {
+        try {
+            // Remove existing boss bar if any
+            CustomBossBar existing = playerBossBars.remove(player);
+            if (existing != null) {
+                existing.destroy();
+            }
+            
+            // Create new boss bar
+            CustomBossBar bar = new CustomBossBar(
+                player,
+                "§4§l• §c§lWaiting for §e§l" + hostName + " §4§l•",
+                CustomBossBar.BarColor.PURPLE,
+                CustomBossBar.BarStyle.PROGRESS
+            );
+            bar.show();
+            playerBossBars.put(player, bar);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Error creating waiting boss bar: " + e.getMessage());
+        }
+    }
+
+    private void showCountdownBossBar(Player player, int seconds) {
+        try {
+            CustomBossBar existing = playerBossBars.get(player);
+            if (existing != null) {
+                existing.destroy();
+            }
+            
+            CustomBossBar bar = new CustomBossBar(
+                player,
+                "§6§l• §e§lStarting in §a" + formatTime(seconds) + " §6§l•",
+                CustomBossBar.BarColor.PURPLE,
+                CustomBossBar.BarStyle.PROGRESS
+            );
+            bar.setProgress(seconds / 10f); // Assuming 10 second countdown
+            bar.show();
+            playerBossBars.put(player, bar);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Error creating countdown boss bar: " + e.getMessage());
+        }
+    }
+
+    // Add this to update countdown
+    public void updateCountdownBossBar(Player player, int seconds) {
+        CustomBossBar bar = playerBossBars.get(player);
+        if (bar != null) {
+            bar.setTitle("§6§l• §e§lStarting in §a" + formatTime(seconds) + " §6§l•");
+            bar.setProgress(seconds / 10f); // Update progress
+        }
+    }
+
+    // Add this to hide boss bar
+    public void hideBossBar(Player player) {
+        CustomBossBar bar = playerBossBars.remove(player);
+        if (bar != null) {
+            bar.destroy();
+        }
+    }
+    
     private void startCountdown(Player starter) {
         if (countdownActive) return;
         main plugin = main.getInstance();
@@ -184,6 +248,7 @@ public class gameconfig implements Listener {
         // Play sound for all players
         for (Player player : Bukkit.getOnlinePlayers()) {
             // Play initial sound at normal pitch for 10 seconds
+        	showCountdownBossBar(player, remainingSeconds);
             player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, 1.0f);
             playersInCountdown.add(player.getUniqueId());
             
@@ -212,6 +277,7 @@ public class gameconfig implements Listener {
                     for (Player player : Bukkit.getOnlinePlayers()) {
                         TitleAPI.sendTitle(player, 0, 20, 10, "§a§lGO", "§2Let's go!");
                         player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, 2.0f); // High pitch
+                        hideBossBar(player);
                     }
                     
                     if (countdownInitiator != null && countdownInitiator.isOnline()) {
@@ -265,6 +331,9 @@ public class gameconfig implements Listener {
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     player.setLevel(remainingSeconds);
                     player.setExp(1.0f - ((10 - remainingSeconds) * 0.1f));
+                }
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    updateCountdownBossBar(player, remainingSeconds);
                 }
                 remainingSeconds--;
             }
@@ -1854,10 +1923,34 @@ public class gameconfig implements Listener {
             }
         }
             }
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        
+        if (!Bukkit.getPluginManager().isPluginEnabled("ProtocolLib")) {
+            return;
+        }
 
+        try {
+            String hostName = Bukkit.getOnlinePlayers().stream()
+                .filter(Player::isOp)
+                .findFirst()
+                .map(Player::getName)
+                .orElse("HOST");
+            
+            showWaitingBossBar(player, hostName);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to show boss bar on join: " + e.getMessage());
+        }
+    }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        CustomBossBar bar = playerBossBars.remove(player);
+        if (bar != null) {
+            bar.destroy();
+        }
         playersInCountdown.remove(event.getPlayer().getUniqueId());
     }
     private static ItemStack[] startingInventory = new ItemStack[36]; // Main inventory (0-35)
