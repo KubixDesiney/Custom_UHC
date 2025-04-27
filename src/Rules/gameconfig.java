@@ -37,6 +37,7 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
@@ -173,7 +174,6 @@ public class gameconfig implements Listener {
     private final Set<UUID> playersInCountdown = new HashSet<>();
     private final Map<UUID, BukkitRunnable> activeCountdowns = new HashMap<>();
     private static final Sound COUNTDOWN_SOUND = Sound.valueOf("BLOCK_NOTE_PLING");
-
     private void startCountdown(Player starter) {
         if (countdownActive) return;
         main plugin = main.getInstance();
@@ -266,7 +266,6 @@ public class gameconfig implements Listener {
                     player.setLevel(remainingSeconds);
                     player.setExp(1.0f - ((10 - remainingSeconds) * 0.1f));
                 }
-                
                 remainingSeconds--;
             }
         };
@@ -295,6 +294,7 @@ public class gameconfig implements Listener {
         String initiatorName = countdownInitiator != null ? countdownInitiator.getName() : "someone";
         Bukkit.broadcastMessage(ChatColor.RED + "Countdown started by " + initiatorName + 
                               " was cancelled by " + canceller.getName() + "!");
+        
         
         resetCountdown();
         // Notify all players
@@ -1854,6 +1854,8 @@ public class gameconfig implements Listener {
             }
         }
             }
+
+
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         playersInCountdown.remove(event.getPlayer().getUniqueId());
