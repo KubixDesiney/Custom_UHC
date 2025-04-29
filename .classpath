@@ -16,12 +16,12 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/21652/Documents/Chancemaker_UHC/plugins/ProtocolLib.jar">
+	<classpathentry kind="lib" path="C:/Users/21652/Documents/Chancemaker_UHC1/plugins/ProtocolLib.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/21652/Documents/Chancemaker_UHC/plugins/TitleAPI.jar">
+	<classpathentry kind="lib" path="C:/Users/21652/Documents/Chancemaker_UHC1/plugins/TitleAPI.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
