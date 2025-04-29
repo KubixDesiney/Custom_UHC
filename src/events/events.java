@@ -49,7 +49,6 @@ public class events implements Listener {
         	if (gamestatus == 0) {
                 Location spawn = new Location(Bukkit.getWorld("world"), 0, 150, 0);
                 player.teleport(spawn);
-        		player.getInventory().clear();
         		player.setGameMode(GameMode.ADVENTURE);
         		player.setFallDistance(0);
         }
@@ -173,21 +172,6 @@ public class events implements Listener {
 	          }
 	      }
 	  }
-
-	  private String getCauseMessage(EntityDamageEvent.DamageCause cause) {
-		    switch (cause) {
-		        case FALL: return "fall";
-		        case FIRE: return "fire";
-		        case DROWNING: return "drowning";
-		        case LAVA: return "lava";
-		        case LIGHTNING: return "lightning";
-		        case SUFFOCATION: return "suffocation";
-		        case ENTITY_EXPLOSION: return "explosion";
-		        case STARVATION: return "starvation";
-		        case POISON: return "poison";
-		        default: return "unknown";
-		    }
-		}
 	
 		
 	}
