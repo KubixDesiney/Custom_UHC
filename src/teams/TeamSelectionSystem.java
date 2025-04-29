@@ -66,7 +66,7 @@ public class TeamSelectionSystem implements Listener {
         
         ItemStack comparator = new ItemStack(Material.REDSTONE_COMPARATOR);
         ItemMeta meta = comparator.getItemMeta();
-        meta.setDisplayName("§eGame Config   §7§l▪ §r§7Right click §7§l▪");
+        meta.setDisplayName("§eGame Config");
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.DARK_PURPLE + "UHC_CONFIG_COMPARATOR");
         meta.setLore(lore);
