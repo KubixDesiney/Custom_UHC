@@ -99,52 +99,42 @@ public class events implements Listener {
 	}
 	@EventHandler
 	public void onPlayerDeath(PlayerDeathEvent event) {
-	    if (event.getEntity() instanceof Player) {
-	        Player player = (Player) event.getEntity();
-	        int dead = 0;
-	        dead = +1;
-	        int alive = Gamestatus.getAlive();
-	        Gamestatus.setAlive(alive - dead);
-	        
-	        Location deathLocation = player.getLocation();
-	        String teamName = teamManager.getPlayerTeam(player);
-	        String teamPrefix = teamManager.getConfigManager().getTeamPrefix(teamName);
-	        String coloredTeamPrefix = ChatColor.translateAlternateColorCodes('&', teamPrefix);
-	        
-	        EntityDamageEvent lastDamageEvent = player.getLastDamageCause();
-	        String deathMessage;
-	        
-	        if (lastDamageEvent instanceof EntityDamageByEntityEvent) {
-	            EntityDamageByEntityEvent entityEvent = (EntityDamageByEntityEvent) lastDamageEvent;
-	            if (entityEvent.getDamager() instanceof Player) {
-	                Player killer = (Player) entityEvent.getDamager();
-	                String killerTeamName = teamManager.getPlayerTeam(killer);
-	                String killerTeamPrefix = teamManager.getConfigManager().getTeamPrefix(killerTeamName);
-	                String coloredKillerPrefix = ChatColor.translateAlternateColorCodes('&', killerTeamPrefix);
-	                
-	                deathMessage = "UHC >> " + coloredTeamPrefix + player.getName() + 
-	                              " §ehas been killed by " + coloredKillerPrefix + killer.getName();
-	                
-	                // Increment killer's kill count (you'll need to implement this)
-	                // For example: incrementKillCount(killer);
-	            } else {
-	                deathMessage = "UHC >> " + coloredTeamPrefix + player.getName() + 
-	                              " §e" + getCauseMessage(lastDamageEvent.getCause());
-	            }
-	        } else {
-	            deathMessage = "UHC >> " + coloredTeamPrefix + player.getName() + 
-	                          " §e" + getCauseMessage(lastDamageEvent.getCause());
-	        }
+	    Player player = event.getEntity();
+	    Location deathLocation = player.getLocation();
 
-	        event.setDeathMessage(deathMessage);
+	    // Set up custom prefix
+	    String UHCPrefix = "§e§lUHC §f§l| §r";
 
-	        Sound sound = Sound.valueOf("ENTITY_WITHER_SPAWN");
-	        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-	            onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F);
-	        }
+	    // Team prefix
+	    String teamName = teamManager.getPlayerTeam(player);
+	    String teamPrefix = teamManager.getConfigManager().getTeamPrefix(teamName);
+	    String coloredTeamPrefix = ChatColor.translateAlternateColorCodes('&', teamPrefix);
 
-	        spawnSafeLightning(deathLocation);
+	    // Get vanilla death message
+	    String vanillaMessage = event.getDeathMessage();
+
+	    // Reconstruct custom message using vanilla text after player name
+	    String playerName = player.getName();
+	    String suffixMessage = vanillaMessage != null && vanillaMessage.contains(playerName)
+	        ? vanillaMessage.substring(vanillaMessage.indexOf(playerName) + playerName.length()).trim()
+	        : "died.";
+
+	    String deathMessage = UHCPrefix + coloredTeamPrefix + playerName + " §e" + suffixMessage;
+
+	    // Apply the new message
+	    event.setDeathMessage(deathMessage);
+
+	    // Play sound
+	    Sound sound = Sound.valueOf("ENTITY_WITHER_SPAWN");
+	    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+	        onlinePlayer.playSound(onlinePlayer.getLocation(), sound, 1.0F, 1.0F);
 	    }
+
+	    spawnSafeLightning(deathLocation);
+
+	    // Update alive count
+	    int alive = Gamestatus.getAlive();
+	    Gamestatus.setAlive(alive - 1);
 	}
 	  private void spawnSafeLightning(Location location) {
 		    // Store the location to track it
