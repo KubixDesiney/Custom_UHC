@@ -54,7 +54,9 @@ public class main extends JavaPlugin {
         // Initialize team manager
         this.teamManager = new UHCTeamManager(this, configManager);
         this.distanceTracker = new TeamDistanceTracker(teamManager, this);
-        distanceTracker.startTracking();
+        if (Gamestatus.getStatus() != 0) {
+        	distanceTracker.startTracking();
+        }
         
         // Set world rules
         World world = Bukkit.getWorld("world");

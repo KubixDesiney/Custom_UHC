@@ -45,6 +45,9 @@ public class events implements Listener {
 		int mode = gamemode.getMode();
 		System.out.print("gamemode: "+mode);
 		int gamestatus = Gamestatus.getStatus();
+	    if (gamestatus == 0) {
+	        player.getInventory().clear();
+	    }
         if (!player.isOp()) {
         	if (gamestatus == 0) {
                 Location spawn = new Location(Bukkit.getWorld("world"), 0, 150, 0);

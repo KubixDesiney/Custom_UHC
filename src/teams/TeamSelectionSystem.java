@@ -66,11 +66,16 @@ public class TeamSelectionSystem implements Listener {
         
         ItemStack comparator = new ItemStack(Material.REDSTONE_COMPARATOR);
         ItemMeta meta = comparator.getItemMeta();
-        meta.setDisplayName("§eGame Config");
+        meta.setDisplayName("§eGame Config   §7§l▪ §r§7Right click §7§l▪");
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.DARK_PURPLE + "UHC_CONFIG_COMPARATOR");
         meta.setLore(lore);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        
+        // Add enchantment glow
+        meta.addEnchant(org.bukkit.enchantments.Enchantment.DURABILITY, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        
         comparator.setItemMeta(meta);
         
         // Force into hotbar (slot 0 if empty, else first available)
