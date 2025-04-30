@@ -16,6 +16,9 @@ import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -174,9 +177,55 @@ public class gameconfig implements Listener {
     private final Set<UUID> playersInCountdown = new HashSet<>();
     private final Map<UUID, BukkitRunnable> activeCountdowns = new HashMap<>();
     private static final Sound COUNTDOWN_SOUND = Sound.valueOf("BLOCK_NOTE_PLING");
+    private BossBar bossBar;
+    private Set<UUID> playersWithBossBar = new HashSet<>();
+
+    private void setupBossBar() {
+        // Create boss bar if it doesn't exist
+        if (bossBar == null) {
+            bossBar = Bukkit.createBossBar("", BarColor.PINK, BarStyle.SOLID);
+            bossBar.setVisible(true);
+            updateBossBarTitle();
+        }
+    }
+
+    private void updateBossBarTitle() {
+        if (bossBar == null) return;
+        
+        if (countdownActive) {
+            // Countdown is active - show countdown message
+            bossBar.setTitle("      §6§l• §e§lStarting in §a" + remainingSeconds + " §6§l•     ");
+        } else {
+            // Waiting for OP - show waiting message
+            String opName = Bukkit.getOnlinePlayers().stream()
+                    .filter(Player::isOp)
+                    .findFirst()
+                    .map(Player::getName)
+                    .orElse("an admin");
+            bossBar.setTitle(" §4§l• §c§lWaiting for §e§l" + opName + " §4§l•");
+        }
+    }
+
+    private void showBossBarToAll() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!playersWithBossBar.contains(player.getUniqueId())) {
+                bossBar.addPlayer(player);
+                playersWithBossBar.add(player.getUniqueId());
+            }
+        }
+    }
+
+    private void hideBossBar() {
+        if (bossBar != null) {
+            bossBar.removeAll();
+            playersWithBossBar.clear();
+        }
+    }
     
     private void startCountdown(Player starter) {
         if (countdownActive) return;
+        setupBossBar();
+        showBossBarToAll();
         main plugin = main.getInstance();
         countdownActive = true;
         remainingSeconds = 10;
@@ -208,9 +257,11 @@ public class gameconfig implements Listener {
         globalCountdown = new BukkitRunnable() {
             @Override
             public void run() {
+            	updateBossBarTitle();
                 if (remainingSeconds <= 0) {
                     // Countdown finished - send "GO" title
                     for (Player player : Bukkit.getOnlinePlayers()) {
+                    	bossBar.removePlayer(player);
                         TitleAPI.sendTitle(player, 0, 20, 10, "§a§lGO", "§2Let's go!");
                         player.playSound(player.getLocation(), COUNTDOWN_SOUND, 1.0f, 2.0f); // High pitch
                     }
@@ -225,6 +276,7 @@ public class gameconfig implements Listener {
                             if (anyOp != null) {
                                 anyOp.performCommand("start");
                             }
+                            
                     }
                     resetCountdown();
                     return;
@@ -313,6 +365,8 @@ public class gameconfig implements Listener {
                 player.updateInventory();
             }
         }
+        updateBossBarTitle();
+        showBossBarToAll();
     }
     private void resetCountdown() {
         if (globalCountdown != null) {
@@ -321,6 +375,8 @@ public class gameconfig implements Listener {
         }
         countdownActive = false;
         countdownInitiator = null; // Clear the initiator
+        updateBossBarTitle();
+        showBossBarToAll();
     }
 
     private boolean spectatorModeEnabled = false;
@@ -1855,10 +1911,32 @@ public class gameconfig implements Listener {
             }
         }
             }
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+    	if (Gamestatus.getStatus() != 1) {
+    		Player player = event.getPlayer();
+    		if (bossBar != null) {
+            // Always add player to boss bar if it exists
+    			bossBar.addPlayer(player);
+    			playersWithBossBar.add(player.getUniqueId());
+            
+            // Make sure the title is up-to-date for the new player
+    			updateBossBarTitle();
+    		} else if (!countdownActive) {
+            // If no boss bar exists and we're not in countdown, create one
+    			setupBossBar();
+    			showBossBarToAll();
+        }
+    	}
+    }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         playersInCountdown.remove(event.getPlayer().getUniqueId());
+        playersWithBossBar.remove(event.getPlayer().getUniqueId());
+        if (bossBar != null) {
+            bossBar.removePlayer(event.getPlayer());
+        }
     }
     private static ItemStack[] startingInventory = new ItemStack[36]; // Main inventory (0-35)
     private static ItemStack[] startingArmor = new ItemStack[4];     // Armor (helmet, chestplate, leggings, boots)

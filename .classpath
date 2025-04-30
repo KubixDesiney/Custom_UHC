@@ -6,11 +6,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry exported="true" kind="lib" path="C:/Users/21652/Downloads/eclipse-jee-2025-03-R-win32-x86_64/eclipse/plugins/spigot-api-1.8.8.jar">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/21652/Downloads/guava-33.4.6-jre.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
@@ -26,7 +21,7 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/21652/Documents/Chancemaker_UHC1/plugins/TAB v5.1.0.jar">
+	<classpathentry kind="lib" path="C:/Users/21652/Downloads/spigot-api-1.12.2-R0.1-20180708.002800-152.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
