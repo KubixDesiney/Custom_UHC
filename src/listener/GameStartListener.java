@@ -9,8 +9,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
-import java.util.logging.Level;
-
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
@@ -35,7 +33,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
@@ -64,6 +61,8 @@ import decoration.ScoreboardHandler;
 		
 	    @EventHandler
 	    public void onGameStart(GameStartEvent e) {
+	        startHealthDisplayUpdater();
+	    	setupPlayerDisplayNames();
 	    	 boolean isGoneFishinEnabled = ((main)Bukkit.getPluginManager().getPlugin("Custom_UHC"))
                      .getGameConfig().goneFishinEnabled;
 	    	Bukkit.getLogger().info("[GAME START] Checking Gone Fishin': " + isGoneFishinEnabled);
@@ -125,6 +124,38 @@ import decoration.ScoreboardHandler;
 	        showHealthInTablist();
 	        teleportTeamsToRandomLocation();
 	    }
+	    private void setupPlayerDisplayNames() {
+	        UHCTeamManager teamManager = ((main) plugin).getTeamManager();
+	        
+	        for (Player player : Bukkit.getOnlinePlayers()) {
+	            String teamName = teamManager.getPlayerTeam(player);
+	            String prefix = teamManager.getConfigManager().getTeamPrefix(teamName != null ? teamName : "");
+	            
+	            // Set player display name with team prefix
+	            String displayName = ChatColor.translateAlternateColorCodes('&', 
+	                (prefix != null ? prefix : "&f") + player.getName());
+	            player.setDisplayName(displayName);
+	            updateHealthDisplay(player);
+	        }
+	    }
+
+	    private void updateHealthDisplay(Player player) {
+	        // Format health to one decimal place
+	        String healthStr = String.format("%.1f", player.getHealth());
+	        
+	        // Create health bar - 20 segments, filled based on current health
+	        int healthSegments = (int) (player.getHealth() / player.getMaxHealth() * 20);
+	        StringBuilder healthBar = new StringBuilder("§c");
+	        for (int i = 0; i < 20; i++) {
+	            healthBar.append(i < healthSegments ? "|" : " ");
+	        }
+	        
+	        // Set the custom name visible above player's head
+	        player.setCustomName(ChatColor.translateAlternateColorCodes('&', 
+	            player.getDisplayName() + "\n" + healthBar.toString() + " §f" + healthStr));
+	        player.setCustomNameVisible(true);
+	    }
+
 	    private void assignUnassignedPlayersToTeams() {
 	        UHCTeamManager teamManager = ((main) plugin).getTeamManager();
 	        gameconfig.getInstance();
@@ -178,9 +209,19 @@ import decoration.ScoreboardHandler;
 	            player.sendMessage(ChatColor.YELLOW + "You were automatically assigned to team " + randomTeam);
 	        }
 	    }
+	    private void startHealthDisplayUpdater() {
+	        // Update health displays every second
+	        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+	            for (Player player : Bukkit.getOnlinePlayers()) {
+	                updateHealthDisplay(player);
+	            }
+	        }, 20L, 20L);
+	    }
 	    @EventHandler
 	    public void onPlayerJoin(PlayerJoinEvent event) {
 	    	if (Gamestatus.getStatus() == 1) {
+	            setupPlayerDisplayNames();
+	            updateHealthDisplay(event.getPlayer());
 	    		if (gameconfig.getInstance().isCatEyesEnabled()) {
 	    			event.getPlayer().addPotionEffect(new PotionEffect(
 	    					PotionEffectType.NIGHT_VISION, 
@@ -451,7 +492,7 @@ import decoration.ScoreboardHandler;
 
 	            // Launch fireworks at winner's location if exists
 	            if (winner != null) {
-	                launchFireworks(winner.getLocation(), 3);
+	                launchFireworks(winner.getLocation(), 5);
 	            }
 	        }
 	    
