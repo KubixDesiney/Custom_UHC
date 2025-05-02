@@ -111,6 +111,7 @@ public class ScoreboardHandler implements Listener {
 
         int meetupTime = gameconfig.getMeetupTime();
         String formattedMeetupTime = gameconfig.formatTime(meetupTime);
+        int netheribusCountdown = gameconfig.getInstance().getNetheribusTime();
 
         World world = Bukkit.getWorld("world");
         if (world == null) return;
@@ -121,7 +122,7 @@ public class ScoreboardHandler implements Listener {
         if (gameStatus == 0) {
             updateWaitingPhase(simpleScoreboard, formattedPvPTime, formattedMeetupTime, borderSize, formattedSwitchTime);
         } else {
-            updateGameInProgress(player, simpleScoreboard, formattedPvPTime, formattedMeetupTime, borderSize, formattedSwitchTime);
+            updateGameInProgress(player, simpleScoreboard, formattedPvPTime, formattedMeetupTime, borderSize, formattedSwitchTime, netheribusCountdown);
         }
     }
 
@@ -134,7 +135,7 @@ public class ScoreboardHandler implements Listener {
         simpleScoreboard.add("§7――――――――――――――――――――――――", 8);
     }
 
-    private void updateGameInProgress(Player player, SimpleScoreboard simpleScoreboard, String formattedPvPTime, String formattedMeetupTime, int borderSize, String formattedSwitchTime) {
+    private void updateGameInProgress(Player player, SimpleScoreboard simpleScoreboard, String formattedPvPTime, String formattedMeetupTime, int borderSize, String formattedSwitchTime, int netheribusCountdown) {
 
         double playerX = player.getLocation().getX();
         double playerZ = player.getLocation().getZ();
@@ -186,6 +187,13 @@ public class ScoreboardHandler implements Listener {
         simpleScoreboard.add("§7--Time--", 14);
         if (gamemode.getMode() == 2) {
         	simpleScoreboard.add("§eSwitch : §b"+ formattedSwitchTime, 12);
+        }
+        if (gameconfig.isNetheribusEnabled() && !gameconfig.isNetheribusActive()) {
+            int countdown = gameconfig.getNetheribusCountdown();
+            int minutes = countdown / 60;
+            int seconds = countdown % 60;
+            String formattedNetheribusTime = String.format("%02d:%02d", minutes, seconds);
+            simpleScoreboard.add("§eNetheriBus: §b" + formattedNetheribusTime, 12);
         }
         simpleScoreboard.add("§ePvP : §b" + formattedPvPTime, 11);
         simpleScoreboard.add("§eMeetup : §b" + formattedMeetupTime, 10);

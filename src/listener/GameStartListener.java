@@ -33,6 +33,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
@@ -63,6 +64,11 @@ import decoration.ScoreboardHandler;
 	    public void onGameStart(GameStartEvent e) {
 	        startHealthDisplayUpdater();
 	    	setupPlayerDisplayNames();
+	        if (gameconfig.getInstance().isNetheribusEnabled()) {
+	            int timeInMinutes = gameconfig.getInstance().getNetheribusTime();
+	            startNetheribusCountdown(timeInMinutes * 60);
+	        }
+
 	    	 boolean isGoneFishinEnabled = ((main)Bukkit.getPluginManager().getPlugin("Custom_UHC"))
                      .getGameConfig().goneFishinEnabled;
 	    	Bukkit.getLogger().info("[GAME START] Checking Gone Fishin': " + isGoneFishinEnabled);
@@ -123,6 +129,68 @@ import decoration.ScoreboardHandler;
 
 	        showHealthInTablist();
 	        teleportTeamsToRandomLocation();
+	    }
+	    private void startNetheribusCountdown(int seconds) {
+	        gameconfig.setNetheribusCountdown(seconds);
+	        gameconfig.setNetheribusActive(false);
+	        
+	        new BukkitRunnable() {
+	            @Override
+	            public void run() {
+	                if (Gamestatus.getStatus() != 1) {
+	                    cancel();
+	                    return;
+	                }
+	                
+	                int currentCountdown = gameconfig.getNetheribusCountdown();
+	                
+	                if (currentCountdown > 0) {
+	                    gameconfig.setNetheribusCountdown(currentCountdown - 1);
+	                    
+	                    int minutes = currentCountdown / 60;
+	                    int seconds = currentCountdown % 60;
+	                    
+	                    // Countdown announcements
+	                    if (currentCountdown == 300) { // 5 minutes
+	                        Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eNetheribus will activate in §b5:00 §eminutes.");
+	                    } else if (currentCountdown == 60) { // 1 minute
+	                        Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eNetheribus will activate in §b1:00 §eminute.");
+	                    } else if (currentCountdown <= 10 && currentCountdown > 0) {
+	                        Sound sound = Sound.valueOf("BLOCK_NOTE_PLING");
+	                        for (Player p : Bukkit.getOnlinePlayers()) {
+	                            p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
+	                        }
+	                        Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eNetheribus in §b" + 
+	                            String.format("%02d:%02d", minutes, seconds) + " §eseconds!");
+	                    }
+	                } else if (currentCountdown == 0) {
+	                    gameconfig.setNetheribusActive(true);
+	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §cNetheribus has activated! Go to the Nether or take damage!");
+	                    
+	                    startNetheribusDamageTask();
+	                    cancel();
+	                }
+	            }
+	        }.runTaskTimer(plugin, 0L, 20L);
+	    }
+
+	    private void startNetheribusDamageTask() {
+	        new BukkitRunnable() {
+	            @Override
+	            public void run() {
+	                if (Gamestatus.getStatus() != 1) {
+	                    cancel();
+	                    return;
+	                }
+	                
+	                for (Player player : Bukkit.getOnlinePlayers()) {
+	                    if (player.getWorld().getName().equals("world")) { // Main world
+	                        player.damage(0.5);
+	                        player.sendMessage("§cYou're taking damage from Netheribus! Go to the Nether!");
+	                    }
+	                }
+	            }
+	        }.runTaskTimer(plugin, 0L, 20L); // Every second
 	    }
 	    private void setupPlayerDisplayNames() {
 	        UHCTeamManager teamManager = ((main) plugin).getTeamManager();

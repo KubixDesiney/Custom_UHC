@@ -2,6 +2,7 @@ package Rules;
 
 
 import test.main;
+import utilities.HotBarMessager;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -487,11 +488,69 @@ public class gameconfig implements Listener {
         
         // Add SafeMiner in the second slot of the second line (slot 10)
         addItem2(scenariosMenu, 10, createSafeMinerItem());
+        addItem2(scenariosMenu, 11, createNetheribusItem());
         
         // Add previous page button at slot 49
         addItem1(scenariosMenu, 49, Material.PAPER, "§ePrevious Page");
         
         player.openInventory(scenariosMenu);
+    }
+    private ItemStack createNetheribusItem() {
+        ItemStack netherrack = new ItemStack(Material.NETHERRACK);
+        ItemMeta meta = netherrack.getItemMeta();
+        meta.setDisplayName("§eNetheribus");
+        
+        List<String> lore = new ArrayList<>();
+        lore.add("§8Catagorie: §b§lOther");
+        lore.add("");
+        lore.add("§8Description: §7After §a" + netheribusTime + "min§7, all players must");
+        lore.add("§7take refuge to the nether or else they");
+        lore.add("§7receive constant damage");
+        lore.add("");
+        lore.add("§8Configuration: §7Duration: §a" + netheribusTime + "min");
+        lore.add("");
+        lore.add("§e➣ §7Status: " + (netheribusEnabled ? "§aEnabled" : "§cDisabled"));
+        lore.add("");
+        lore.add("§c[i] §6Configurable scenario");
+        lore.add("");
+        lore.add("§6§l➣ §r§eLeft-click to §aEnable§e/§cDisable");
+        lore.add("§6§l➣ §r§eRight-click to configure");
+        
+        meta.setLore(lore);
+        
+        if (netheribusEnabled) {
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        
+        netherrack.setItemMeta(meta);
+        return netherrack;
+    }
+    private void openNetheribusConfigMenu(Player player) {
+        Inventory menu = Bukkit.createInventory(null, 9, "Netheribus Configuration");
+        
+        // Current time display
+        ItemStack clock = new ItemStack(Material.WATCH);
+        ItemMeta clockMeta = clock.getItemMeta();
+        clockMeta.setDisplayName("§eNetheribus Time");
+        clockMeta.setLore(Arrays.asList(
+            "",
+            "§7Duration: §a" + netheribusTime + "min",
+            "",
+            "§6§l➣ §eRight-click to add §a+1 §emin",
+            "§6§l➣ §eLeft-click to add §c-1 §emin"
+        ));
+        clock.setItemMeta(clockMeta);
+        menu.setItem(4, clock);
+        
+        // Back button
+        ItemStack back = new ItemStack(Material.ARROW);
+        ItemMeta backMeta = back.getItemMeta();
+        backMeta.setDisplayName("§cBack to Scenarios");
+        back.setItemMeta(backMeta);
+        menu.setItem(0, back);
+        
+        player.openInventory(menu);
     }
     private boolean safeMinerEnabled = false;
     private ItemStack createSafeMinerItem() {
@@ -1014,6 +1073,7 @@ public class gameconfig implements Listener {
                 player.sendMessage("§eSafeMiner scenario: " + status);
                 event.setCancelled(true);
             }
+            
 
         // Handle scenario clicks
         if (event.getView().getTitle().contains("Scenarios")) {
@@ -1120,6 +1180,43 @@ public class gameconfig implements Listener {
                     event.setCancelled(true);
                 }
 
+        }
+        if (event.getView().getTitle().contains("Scenarios - Page 2")) {
+            if (item.getType() == Material.NETHERRACK && item.getItemMeta().getDisplayName().equals("§eNetheribus")) {
+                if (event.getClick().isRightClick()) {
+                    openNetheribusConfigMenu(player);
+                } else {
+                    netheribusEnabled = !netheribusEnabled;
+                    plugin.getConfig().set("scenarios.netheribus.enabled", netheribusEnabled);
+                    plugin.saveConfig();
+                    
+                    event.getInventory().setItem(event.getSlot(), createNetheribusItem());
+                    
+                    String status = netheribusEnabled ? "§aENABLED" : "§cDISABLED";
+                    player.sendMessage("§eNetheribus scenario: " + status);
+                }
+                event.setCancelled(true);
+            }
+        }
+        
+        // Handle Netheribus config menu
+        if (event.getView().getTitle().equals("Netheribus Configuration")) {
+            event.setCancelled(true);
+            
+            if (item.getType() == Material.WATCH) {
+                if (event.getClick().isRightClick()) {
+                    netheribusTime++;
+                } else if (event.getClick().isLeftClick()) {
+                    netheribusTime = Math.max(1, netheribusTime - 1);
+                }
+                
+                plugin.getConfig().set("scenarios.netheribus.time", netheribusTime);
+                plugin.saveConfig();
+                
+                openNetheribusConfigMenu(player);
+            } else if (item.getType() == Material.ARROW) {
+                openScenariosMenuPage2(player);
+            }
         }
 
         // Handle gamemode changes
@@ -1990,6 +2087,7 @@ public class gameconfig implements Listener {
         player.openInventory(menu);
     }
     public void openStartingItemsEditor(Player player) {
+        startEditModeReminder(player);
         // Clear the player's inventory and load saved items (if they exist)
         player.getInventory().clear();
         player.getInventory().setArmorContents(null);
@@ -2038,8 +2136,17 @@ public class gameconfig implements Listener {
         else if (slot == 53) {
             player.closeInventory();
             player.setGameMode(GameMode.CREATIVE);
-            player.sendMessage(ChatColor.GREEN + "§aYou are now in setup mode!");
-            player.sendMessage(ChatColor.GREEN + "§aEdit your inventory and type §e/finish §awhen done.");
+            player.sendMessage("§f§o+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯+");
+            player.sendMessage(" ");
+            player.sendMessage(" §7§l» §e§lHelp ᅳ §e§lInventory customization:");
+            player.sendMessage(" ");
+            player.sendMessage("  §e§lExplanation:");
+            player.sendMessage("   §7§l◾ §r§fequipe the items that you want to the empty spaces in your survival inventory");
+            player.sendMessage("  §e§lCommandes:");
+            player.sendMessage("  §7§l◾ §r§6/§fenchant §f§l» §r§7Enchant an object");
+            player.sendMessage("  §7§l◾ §r§6/§ffinish §f§l» §r§7Finish the customization");
+            player.sendMessage(" ");
+            player.sendMessage("§f§o+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯+");
         }
     }
     @EventHandler
@@ -2151,6 +2258,22 @@ public class gameconfig implements Listener {
 
         player.openInventory(menu);
     }
+    private void startEditModeReminder(Player player) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!playersInSetupMode.contains(player.getUniqueId())) {
+                    cancel();
+                    return;
+                }
+                try {
+					HotBarMessager.sendHotBarMessage(player, "§f§l⭆ §eFinish the customization: §b/finish §f§l⭅");
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+            }
+        }.runTaskTimer(plugin, 0L, 20L); // Show every second
+    }
     @EventHandler
     public void onEnchantMenuClick(InventoryClickEvent event) {
         if (!event.getView().getTitle().equals(ChatColor.DARK_PURPLE + "Tool Enchanting")) return;
@@ -2222,7 +2345,8 @@ public class gameconfig implements Listener {
             return Enchantment.DURABILITY; // Unbreaking (fallback)
         }
     }
-
+    private static boolean netheribusEnabled = false;
+    private int netheribusTime = 30; 
     private void giveGameNameBook(Player player) {
         ItemStack book = new ItemStack(Material.BOOK_AND_QUILL);
         player.getInventory().addItem(book);
@@ -2398,6 +2522,24 @@ public class gameconfig implements Listener {
     	        }
     	    }.runTaskTimer(Bukkit.getPluginManager().getPlugin("Custom_UHC"), 0L, 20L);
     	}
+     private static int netheribusCountdown = 0;
+     private static boolean netheribusActive = false;
+
+     public static int getNetheribusCountdown() {
+         return netheribusCountdown;
+     }
+
+     public static void setNetheribusCountdown(int seconds) {
+         netheribusCountdown = seconds;
+     }
+
+     public static boolean isNetheribusActive() {
+         return netheribusActive;
+     }
+
+     public static void setNetheribusActive(boolean active) {
+         netheribusActive = active;
+     }
   // Disable Nether access (Set a flag or modify game rules)
      private void disableNetherAccess() {
          isNetherAccessEnabled = false;  // This flag can be used in your logic to prevent Nether access
@@ -2488,6 +2630,13 @@ public class gameconfig implements Listener {
     	    if (!borderShrinking) {
     	        borderShrinking = true; // Lock the border speed after it is set
     	    }
+    	}
+    	public static boolean isNetheribusEnabled() {
+    	    return netheribusEnabled;
+    	}
+
+    	public int getNetheribusTime() {
+    	    return netheribusTime;
     	}
     	
     	public void startBorderShrink() {
