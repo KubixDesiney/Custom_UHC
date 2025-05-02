@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -13,6 +14,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import com.connorlinfoot.titleapi.TitleAPI;
 
 import Rules.gameconfig;
 import gamemodes.Gamestatus;
@@ -28,12 +31,14 @@ import java.util.UUID;
 public class SafeMinerListener implements Listener {
     private final gameconfig config;
     private final UHCTeamManager teamManager;
+    private final main plugin;
     private final Map<UUID, Boolean> pendingRevives = new HashMap<>();
     private final Map<UUID, Integer> originalPowers = new HashMap<>();
     private final Map<UUID, Boolean> invinciblePlayers = new HashMap<>();
     private final Map<UUID, List<PotionEffect>> savedEffects = new HashMap<>();
 
-    public SafeMinerListener(gameconfig config, UHCTeamManager teamManager) {
+    public SafeMinerListener(main plugin,gameconfig config, UHCTeamManager teamManager) {
+    	this.plugin = plugin;
         this.config = config;
         this.teamManager = teamManager;
     }
@@ -42,7 +47,21 @@ public class SafeMinerListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         if (!gameconfig.getInstance().isSafeMinerEnabled() || Gamestatus.getStatus() != 1) return;
         
+        
         Player player = event.getEntity();
+        gameconfig config = gameconfig.getInstance();
+        if (config.isKingsEnabled()) {
+            String teamName = teamManager.getPlayerTeam(player);
+            Player king = config.getTeamKing(teamName);
+            
+            if (player.equals(king)) {
+                // King died
+                if (!config.isSafeMinerEnabled() || player.getKiller() != null) {
+                    // Only apply effects if not safe miner or if killed by player
+                    handleKingDeath(teamName, player);
+                }
+            }
+        }
         
         if (gameconfig.getMeetupTime() <= 0 || player.getKiller() != null) {
             return;
@@ -53,7 +72,6 @@ public class SafeMinerListener implements Listener {
             GameStartListener gameStartListener = new GameStartListener(main.getInstance(), null, config);
             originalPowers.put(player.getUniqueId(), gameStartListener.getPlayerPower(player.getUniqueId()));
         }
-        
         // Store all active effects
         List<PotionEffect> effectsToSave = new ArrayList<>(player.getActivePotionEffects());
         savedEffects.put(player.getUniqueId(), effectsToSave);
@@ -113,6 +131,16 @@ public class SafeMinerListener implements Listener {
                         if (!player.isOnline()) {
                             cleanupPlayerData(player.getUniqueId());
                             return;
+                        }
+                        if (config.isKingsEnabled()) {
+                            String teamName = teamManager.getPlayerTeam(player);
+                            Player king = config.getTeamKing(teamName);
+                            
+                            if (player.equals(king)) {
+                                // Restore king's double health
+                                player.setMaxHealth(40);
+                                player.setHealth(40);
+                            }
                         }
 
                         // Clear existing effects silently
@@ -184,7 +212,35 @@ public class SafeMinerListener implements Listener {
             }
         }.runTaskLater(main.getInstance(), 5L); // Small initial delay
     }
-
+    private void handleKingDeath(String teamName, Player king) {
+        UHCTeamManager teamManager = ((main) plugin).getTeamManager();
+        gameconfig config = gameconfig.getInstance();
+        
+        // Play sound and show title to team members
+        Sound deathSound = Sound.valueOf("ENTITY_ENDERDRAGON_DEATH"); // Scary sound
+        String prefix = teamManager.getConfigManager().getTeamPrefix(teamName);
+        
+        for (Player teammate : UHCTeamManager.getPlayersInTeam(teamName)) {
+            teammate.playSound(teammate.getLocation(), deathSound, 1.0f, 1.0f);
+            TitleAPI.sendTitle(teammate, 10, 70, 10, "§4§l⮚ §r§cTHE KING IS DEAD §4§l⮘", "");
+            
+            // Apply poison effect
+            teammate.addPotionEffect(new PotionEffect(
+                PotionEffectType.POISON, 
+                30 * 20, // 30 seconds
+                1 // Level 2
+            ));
+        }
+        
+        // Broadcast death message
+        String broadcastMsg = ChatColor.translateAlternateColorCodes('&',
+            "§e§lUHC §f§l│ §r" + prefix + king.getName() + 
+            " §ethe king of " + prefix + teamName + " §eis dead !");
+        Bukkit.broadcastMessage(broadcastMsg);
+        
+        // Remove king from config
+        config.teamKings.remove(teamName);
+    }
     // Helper method to get proper Minecraft effect names
     private String getMinecraftEffectName(PotionEffectType type) {
         if (type == null) return null;

@@ -64,6 +64,9 @@ import decoration.ScoreboardHandler;
 	    public void onGameStart(GameStartEvent e) {
 	        startHealthDisplayUpdater();
 	    	setupPlayerDisplayNames();
+	    	if (gameconfig.getInstance().isKingsEnabled()) {
+	    	    selectKings();
+	    	}
 	        if (gameconfig.getInstance().isNetheribusEnabled()) {
 	            int timeInMinutes = gameconfig.getInstance().getNetheribusTime();
 	            startNetheribusCountdown(timeInMinutes * 60);
@@ -129,6 +132,33 @@ import decoration.ScoreboardHandler;
 
 	        showHealthInTablist();
 	        teleportTeamsToRandomLocation();
+	    }
+	    private void selectKings() {
+	        UHCTeamManager teamManager = ((main) plugin).getTeamManager();
+	        gameconfig config = gameconfig.getInstance();
+	        
+	        for (String teamName : UHCTeamManager.getAllTeams()) {
+	            List<Player> teamPlayers = UHCTeamManager.getPlayersInTeam(teamName);
+	            if (!teamPlayers.isEmpty()) {
+	                // Select random king
+	                Player king = teamPlayers.get(new Random().nextInt(teamPlayers.size()));
+	                config.teamKings.put(teamName, king);
+	                
+	                // Give king double health
+	                king.setMaxHealth(40);
+	                king.setHealth(40);
+	                
+	                // Notify team members
+	                String prefix = teamManager.getConfigManager().getTeamPrefix(teamName);
+	                String kingMessage = ChatColor.translateAlternateColorCodes('&', 
+	                    "§e§lUHC §f§l│ §r§eYour assigned king is: " + prefix + king.getName() + 
+	                    " §eprotect him at all cost !");
+	                
+	                for (Player teammate : teamPlayers) {
+	                    teammate.sendMessage(kingMessage);
+	                }
+	            }
+	        }
 	    }
 	    private void startNetheribusCountdown(int seconds) {
 	        gameconfig.setNetheribusCountdown(seconds);
@@ -526,6 +556,7 @@ import decoration.ScoreboardHandler;
 	            DamageTracker damageTracker = main.getInstance().getDamageTracker();
 	            Player topDamager = (damageTracker != null) ? damageTracker.getTopDamager() : null;
 	            double topDamage = (topDamager != null) ? damageTracker.getPlayerDamage(topDamager) : 0.0;
+	            gameconfig.getInstance().teamKings.clear();
 	            Player winner = e.getWinner();
 	            Player topKiller = e.gettopkiller();
 

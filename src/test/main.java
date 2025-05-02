@@ -75,7 +75,7 @@ public class main extends JavaPlugin {
         // Initialize commands and listeners
         ScoreboardHandler scoreBoard = new ScoreboardHandler(this, teamManager);
         CommandCenter commandCenter = new CommandCenter(teamManager, scoreBoard, configManager);
-        SafeMinerListener safeMinerListener = new SafeMinerListener(gameConfig, teamManager);
+        SafeMinerListener safeMinerListener = new SafeMinerListener(this, gameConfig, teamManager);
         TeamEliminationListener teamEliminationListener = new TeamEliminationListener(teamManager, this, safeMinerListener);
         
         // Register commands

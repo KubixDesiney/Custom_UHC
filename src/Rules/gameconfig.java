@@ -491,9 +491,49 @@ public class gameconfig implements Listener {
         addItem2(scenariosMenu, 11, createNetheribusItem());
         
         // Add previous page button at slot 49
+        addItem2(scenariosMenu, 12, createKingsItem());
         addItem1(scenariosMenu, 49, Material.PAPER, "§ePrevious Page");
         
         player.openInventory(scenariosMenu);
+    }
+    private boolean kingsEnabled = false;
+    public final Map<String, Player> teamKings = new HashMap<>(); // Team name -> King
+
+    // Add this with other scenario getters
+    public boolean isKingsEnabled() {
+        return kingsEnabled;
+    }
+
+    public Player getTeamKing(String teamName) {
+        return teamKings.get(teamName);
+    }
+
+    // Add this method to create the Kings item
+    private ItemStack createKingsItem() {
+        ItemStack sword = new ItemStack(Material.GOLD_SWORD);
+        ItemMeta meta = sword.getItemMeta();
+        meta.setDisplayName("§eKings");
+        
+        List<String> lore = new ArrayList<>();
+        lore.add("§8Catagorie: §b§l✦ §r§bOther §b§l✦");
+        lore.add("");
+        lore.add("§8Description: §7A random player from your team will be selected as §eking");
+        lore.add("");
+        lore.add("§8Your objective: §7Protect him at all cost !");
+        lore.add("");
+        lore.add("§e» §7Status: " + (kingsEnabled ? "§aEnabled" : "§cDisabled"));
+        lore.add("");
+        lore.add("§6§l» §eLeft-click: §aEnable§e/§cDisable");
+        
+        meta.setLore(lore);
+        
+        if (kingsEnabled) {
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        
+        sword.setItemMeta(meta);
+        return sword;
     }
     private ItemStack createNetheribusItem() {
         ItemStack netherrack = new ItemStack(Material.NETHERRACK);
@@ -1177,6 +1217,16 @@ public class gameconfig implements Listener {
                     
                     String status = superHeroesEnabled ? "§aENABLED" : "§cDISABLED";
                     player.sendMessage("§eSuperHeroes scenario: " + status);
+                    event.setCancelled(true);
+                } else if (item.getType() == Material.GOLD_SWORD && item.getItemMeta().getDisplayName().equals("§eKings")) {
+                    kingsEnabled = !kingsEnabled;
+                    plugin.getConfig().set("scenarios.kings", kingsEnabled);
+                    plugin.saveConfig();
+                    
+                    event.getInventory().setItem(event.getSlot(), createKingsItem());
+                    
+                    String status = kingsEnabled ? "§aENABLED" : "§cDISABLED";
+                    player.sendMessage("§eKings scenario: " + status);
                     event.setCancelled(true);
                 }
 
