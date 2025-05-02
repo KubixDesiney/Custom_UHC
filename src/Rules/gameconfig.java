@@ -2102,8 +2102,17 @@ public class gameconfig implements Listener {
         // Switch to Creative Mode and add to setup mode tracking
         player.setGameMode(GameMode.CREATIVE);
         playersInSetupMode.add(player.getUniqueId());
-        player.sendMessage(ChatColor.GREEN + "§aYou are now editing starting items!");
-        player.sendMessage(ChatColor.GREEN + "§aModify your inventory and type §e/finish §awhen done.");
+        player.sendMessage("§f§o+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯+");
+        player.sendMessage(" ");
+        player.sendMessage(" §7§l» §e§lHelp ᅳ §e§lInventory customization:");
+        player.sendMessage(" ");
+        player.sendMessage("  §e§lExplanation:");
+        player.sendMessage("   §7§l◾ §r§fequipe the items that you want to the empty spaces in your survival inventory");
+        player.sendMessage("  §e§lCommandes:");
+        player.sendMessage("  §7§l◾ §r§6/§fenchant §f§l» §r§7Enchant an object");
+        player.sendMessage("  §7§l◾ §r§6/§ffinish §f§l» §r§7Finish the customization");
+        player.sendMessage(" ");
+        player.sendMessage("§f§o+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯+");
     }
     @EventHandler
     public void onStartingItemsViewerClick(InventoryClickEvent event) {
