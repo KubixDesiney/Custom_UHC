@@ -64,9 +64,6 @@ import decoration.ScoreboardHandler;
 	    public void onGameStart(GameStartEvent e) {
 	        startHealthDisplayUpdater();
 	    	setupPlayerDisplayNames();
-	    	if (gameconfig.getInstance().isKingsEnabled()) {
-	    	    selectKings();
-	    	}
 	        if (gameconfig.getInstance().isNetheribusEnabled()) {
 	            int timeInMinutes = gameconfig.getInstance().getNetheribusTime();
 	            startNetheribusCountdown(timeInMinutes * 60);
@@ -128,8 +125,9 @@ import decoration.ScoreboardHandler;
 	            Bukkit.getLogger().info("Gone Fishin' scenario is enabled - giving rods");
 	            giveGoneFishinRods();
 	        }
-	        
-
+	    	if (gameconfig.getInstance().isKingsEnabled()) {
+	    	    selectKings();
+	    	}
 	        showHealthInTablist();
 	        teleportTeamsToRandomLocation();
 	    }
