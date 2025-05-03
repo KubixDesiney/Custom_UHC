@@ -492,9 +492,75 @@ public class gameconfig implements Listener {
         
         // Add previous page button at slot 49
         addItem2(scenariosMenu, 12, createKingsItem());
+        addItem2(scenariosMenu, 13, createNoCleanUpItem());
         addItem1(scenariosMenu, 49, Material.PAPER, "§ePrevious Page");
         
         player.openInventory(scenariosMenu);
+    }
+    private boolean noCleanUpEnabled = false;
+    private double noCleanUpHearts = 4.0; // Default value
+    public boolean isNoCleanUpEnabled() {
+        return noCleanUpEnabled;
+    }
+
+    public double getNoCleanUpHearts() {
+        return noCleanUpHearts;
+    }
+    private ItemStack createNoCleanUpItem() {
+        ItemStack sword = new ItemStack(Material.DIAMOND_SWORD);
+        ItemMeta meta = sword.getItemMeta();
+        meta.setDisplayName("§eNoCleanUp");
+        
+        List<String> lore = new ArrayList<>();
+        lore.add("§8Catagorie: §b§l✦ §r§bOther §b§l✦");
+        lore.add("");
+        lore.add("§8Description:");
+        lore.add("§7Once an enemy dies you gain §c" + noCleanUpHearts + " §c§l❤");
+        lore.add("");
+        lore.add("§8Configuration:");
+        lore.add("§7Regeneration: §c" + noCleanUpHearts + " §c§l❤");
+        lore.add("");
+        lore.add("§e» §7Status: " + (noCleanUpEnabled ? "§aEnabled" : "§cDisabled"));
+        lore.add("");
+        lore.add("§c[i] §6Configurable scenario");
+        lore.add("");
+        lore.add("§6§l» §eLeft-click: §aEnable§e/§cDisable");
+        lore.add("§6§l» §eRight-click to configure");
+        
+        meta.setLore(lore);
+        
+        if (noCleanUpEnabled) {
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        
+        sword.setItemMeta(meta);
+        return sword;
+    }
+    private void openNoCleanUpConfigMenu(Player player) {
+        Inventory menu = Bukkit.createInventory(null, 9, "NoCleanUp Configuration");
+        
+        // Current hearts display
+        ItemStack apple = new ItemStack(Material.APPLE);
+        ItemMeta appleMeta = apple.getItemMeta();
+        appleMeta.setDisplayName("§eRegeneration Configuration");
+        appleMeta.setLore(Arrays.asList(
+            "§7Current Regeneration: §c" + noCleanUpHearts + " §c§l❤",
+            "",
+            "§6§l» §eLeft-Click: §c+0.5 §c§l❤",
+            "§6§l» §eRight-Click: §c-0.5 §c§l❤"
+        ));
+        apple.setItemMeta(appleMeta);
+        menu.setItem(4, apple);
+        
+        // Back button
+        ItemStack back = new ItemStack(Material.ARROW);
+        ItemMeta backMeta = back.getItemMeta();
+        backMeta.setDisplayName("§cBack to Scenarios");
+        back.setItemMeta(backMeta);
+        menu.setItem(8, back);
+        
+        player.openInventory(menu);
     }
     private boolean kingsEnabled = false;
     public final Map<String, Player> teamKings = new HashMap<>(); // Team name -> King
@@ -1228,7 +1294,22 @@ public class gameconfig implements Listener {
                     String status = kingsEnabled ? "§aENABLED" : "§cDISABLED";
                     player.sendMessage("§eKings scenario: " + status);
                     event.setCancelled(true);
+                } else if (item.getType() == Material.DIAMOND_SWORD && item.getItemMeta().getDisplayName().equals("§eNoCleanUp")) {
+                    if (event.getClick().isRightClick()) {
+                        openNoCleanUpConfigMenu(player);
+                    } else {
+                        noCleanUpEnabled = !noCleanUpEnabled;
+                        plugin.getConfig().set("scenarios.no_cleanup.enabled", noCleanUpEnabled);
+                        plugin.saveConfig();
+                        
+                        event.getInventory().setItem(event.getSlot(), createNoCleanUpItem());
+                        
+                        String status = noCleanUpEnabled ? "§aENABLED" : "§cDISABLED";
+                        player.sendMessage("§eNoCleanUp scenario: " + status);
+                    }
+                    event.setCancelled(true);
                 }
+
 
         }
         if (event.getView().getTitle().contains("Scenarios - Page 2")) {
@@ -1266,6 +1347,24 @@ public class gameconfig implements Listener {
                 openNetheribusConfigMenu(player);
             } else if (item.getType() == Material.ARROW) {
                 openScenariosMenuPage2(player);
+            }
+        }
+        if (event.getView().getTitle().equals("NoCleanUp Configuration")) {
+            event.setCancelled(true);
+            
+            if (item.getType() == Material.APPLE) {
+                if (event.getClick().isLeftClick()) {
+                    noCleanUpHearts += 0.5;
+                } else if (event.getClick().isRightClick()) {
+                    noCleanUpHearts = Math.max(0.5, noCleanUpHearts - 0.5);
+                }
+                
+                plugin.getConfig().set("scenarios.no_cleanup.hearts", noCleanUpHearts);
+                plugin.saveConfig();
+                
+                openNoCleanUpConfigMenu(player);
+            } else if (item.getType() == Material.ARROW) {
+                openScenariosMenu(player);
             }
         }
 

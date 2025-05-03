@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
+import org.bukkit.Effect;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -25,6 +26,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -156,6 +158,28 @@ import decoration.ScoreboardHandler;
 	                    teammate.sendMessage(kingMessage);
 	                }
 	            }
+	        }
+	    }
+	    @EventHandler
+	    public void onPlayerDeath(PlayerDeathEvent event) {
+	        if (!config.isNoCleanUpEnabled() || Gamestatus.getStatus() != 1) {
+	            return;
+	        }
+
+	        Player victim = event.getEntity();
+	        Player killer = victim.getKiller();
+	        
+	        if (killer != null) {
+	            double heartsToRegen = config.getNoCleanUpHearts();
+	            double newHealth = Math.min(killer.getHealth() + (heartsToRegen * 2), killer.getMaxHealth());
+	            
+	            killer.setHealth(newHealth);
+	            killer.sendMessage(ChatColor.GREEN + "You regenerated " + heartsToRegen + " hearts from the kill!");
+	            
+	            
+	            // Show particles
+	            killer.getWorld().spigot().playEffect(killer.getLocation(), Effect.HEART, 
+	                0, 0, 0.5f, 0.5f, 0.5f, 0.1f, 5, 16);
 	        }
 	    }
 	    private void startNetheribusCountdown(int seconds) {
