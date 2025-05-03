@@ -129,8 +129,9 @@ public class ScoreboardHandler implements Listener {
     private void updateWaitingPhase(SimpleScoreboard simpleScoreboard, String formattedPvPTime, String formattedMeetupTime, int borderSize, String formattedSwitchTime) {
         simpleScoreboard.add(" ", 14);
         simpleScoreboard.add("§7Mode: §b" + gameconfig.getTeamSize() + "§bvs" + gameconfig.getTeamSize(), 13);
-        simpleScoreboard.add("§7Players : §e" + Bukkit.getOnlinePlayers().size() + "§7/§e" + Bukkit.getMaxPlayers(), 12);
-        simpleScoreboard.add(" ", 11);
+        simpleScoreboard.add(" ", 12);
+        simpleScoreboard.add("§7Players : §e" + Bukkit.getOnlinePlayers().size() + "§7/§e" + Bukkit.getMaxPlayers(), 11);
+        simpleScoreboard.add(" ", 10);
         simpleScoreboard.add("§6mc.chancemaker.com", 9);
         simpleScoreboard.add("§7――――――――――――――――――――――――", 8);
     }
