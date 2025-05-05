@@ -2,6 +2,7 @@ package listener;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,8 +26,12 @@ import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -66,10 +71,13 @@ import decoration.ScoreboardHandler;
 	    public void onGameStart(GameStartEvent e) {
 	        startHealthDisplayUpdater();
 	    	setupPlayerDisplayNames();
-	    	if (gameconfig.getInstance().isSkyHighEnabled()) {
+	    	gameconfig.getInstance();
+			if (gameconfig.isSkyHighEnabled()) {
+	    		giveInfiniteDirtToAllPlayers();
 	    	    startSkyHighCountdown(gameconfig.getInstance().getSkyHighTime() * 60);
 	    	}
-	        if (gameconfig.getInstance().isNetheribusEnabled()) {
+	        gameconfig.getInstance();
+			if (gameconfig.isNetheribusEnabled()) {
 	            int timeInMinutes = gameconfig.getInstance().getNetheribusTime();
 	            startNetheribusCountdown(timeInMinutes * 60);
 	        }
@@ -177,6 +185,88 @@ import decoration.ScoreboardHandler;
 	            }
 	        }.runTaskTimer(plugin, 0L, 20L);
 	    }
+	    private void giveInfiniteDirtToAllPlayers() {
+	        // Create the special dirt item
+	        ItemStack infiniteDirt = new ItemStack(Material.DIRT, 1);
+	        ItemMeta meta = infiniteDirt.getItemMeta();
+	        meta.setDisplayName("§aInfinite Dirt");
+	        meta.setLore(Arrays.asList("§7Place this to climb up!", "§7You'll always have 1 dirt block."));
+	        infiniteDirt.setItemMeta(meta);
+	        
+	        // Give to every player
+	        for (Player player : Bukkit.getOnlinePlayers()) {
+	            player.getInventory().addItem(infiniteDirt);
+	        }
+	    }
+	    @EventHandler
+	    public void onBlockBreak(BlockBreakEvent event) {
+	        gameconfig.getInstance();
+			if (gameconfig.isSkyHighEnabled() && 
+	            event.getBlock().getType() == Material.DIRT) {
+	            event.setDropItems(false); // No drops when breaking dirt
+	        }
+	    }
+	    @EventHandler
+	    public void onBlockPlace(BlockPlaceEvent event) {
+	        gameconfig.getInstance();
+			if (gameconfig.isSkyHighEnabled() && 
+	            event.getItemInHand().getType() == Material.DIRT) {
+	            
+	            // Give the dirt back after 1 tick (so the placement happens first)
+	            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+	                event.getPlayer().getInventory().addItem(new ItemStack(Material.DIRT, 1));
+	            }, 1);
+	        }
+	    }
+	    @EventHandler
+	    public void onPlayerInteract(PlayerInteractEvent event) {
+	        gameconfig.getInstance();
+			// Handle infinite dirt replacement
+	        if (gameconfig.isSkyHighEnabled() && 
+	            event.getAction() == Action.RIGHT_CLICK_BLOCK &&
+	            event.getItem() != null && 
+	            event.getItem().getType() == Material.DIRT &&
+	            event.getItem().hasItemMeta() &&
+	            event.getItem().getItemMeta().getDisplayName().equals("§aInfinite Dirt")) {
+	            
+	            // Replace the used dirt in inventory
+	            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+	                Player player = event.getPlayer();
+	                if (player.getInventory().contains(Material.DIRT)) {
+	                    // Find the dirt slot and ensure it stays at 1
+	                    for (int i = 0; i < player.getInventory().getSize(); i++) {
+	                        ItemStack item = player.getInventory().getItem(i);
+	                        if (item != null && item.getType() == Material.DIRT && 
+	                            item.hasItemMeta() && 
+	                            item.getItemMeta().getDisplayName().equals("§aInfinite Dirt")) {
+	                            
+	                            if (item.getAmount() > 1) {
+	                                item.setAmount(1);
+	                            } else if (item.getAmount() < 1) {
+	                                player.getInventory().setItem(i, createInfiniteDirt());
+	                            }
+	                            break;
+	                        }
+	                    }
+	                } else {
+	                    // Give back if somehow lost
+	                    player.getInventory().addItem(createInfiniteDirt());
+	                }
+	            }, 1L);
+	        }
+	    }
+
+	    private ItemStack createInfiniteDirt() {
+	        ItemStack dirt = new ItemStack(Material.DIRT, 1);
+	        ItemMeta meta = dirt.getItemMeta();
+	        meta.setDisplayName("§aInfinite Dirt");
+	        meta.setLore(Arrays.asList("§7Use this to build up when SkyHigh activates!", "§7Does not drop when broken."));
+	        meta.spigot().setUnbreakable(true);
+	        meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
+	        dirt.setItemMeta(meta);
+	        return dirt;
+	    }
+
 
 	    private void startSkyHighDamageTask() {
 	        new BukkitRunnable() {
