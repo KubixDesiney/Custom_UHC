@@ -419,7 +419,7 @@ public class gameconfig implements Listener {
         addItem1(scenariosMenu, 28, Material.TNT, "§eTNT");
         addItem1(scenariosMenu, 29, Material.ENCHANTED_BOOK, "§eEnchanted Book");
         addItem1(scenariosMenu, 30, Material.DIAMOND_BOOTS, "§eDiamond Boots");
-        addItem1(scenariosMenu, 31, Material.LADDER, "§eLadder");
+        addItem2(scenariosMenu, 31, createSkyHighItem());
         addItem1(scenariosMenu, 32, Material.WOOD, "§eWood");
         addItem1(scenariosMenu, 33, Material.CHEST, "§eChest");
         addItem2(scenariosMenu, 34, createCatEyesItem());
@@ -497,6 +497,100 @@ public class gameconfig implements Listener {
         
         player.openInventory(scenariosMenu);
     }
+    private static boolean skyHighEnabled = false;
+    private static int skyHighTime = 45; // Default 45 minutes
+    private double skyHighDamage = 0.5; // Default 0.5 hearts
+    public static boolean isSkyHighActive() {
+        return skyHighEnabled && skyHighTime <= 0;
+    }
+
+    public static int getSkyHighCountdown() {
+        return skyHighTime * 60 - (int)(getGameElapsedTime() / 1000);
+    }
+    public static boolean isSkyHighEnabled() {
+        return skyHighEnabled;
+    }
+
+    public int getSkyHighTime() {
+        return skyHighTime;
+    }
+
+    public double getSkyHighDamage() {
+        return skyHighDamage;
+    }
+    private ItemStack createSkyHighItem() {
+        ItemStack ladder = new ItemStack(Material.LADDER);
+        ItemMeta meta = ladder.getItemMeta();
+        meta.setDisplayName("§eSkyHigh");
+        
+        List<String> lore = new ArrayList<>();
+        lore.add("§8Catégorie: §b§l✦ §r§bOther §b§l✦");
+        lore.add("");
+        lore.add("§8Description:");
+        lore.add("§7After §e§l" + skyHighTime + "min §r§7of playing time players who are under");
+        lore.add("§7the height 200 (y:200) takes §c§l" + skyHighDamage + "❤ §r§7of damage every 30sec.");
+        lore.add("");
+        lore.add("§8Configuration:");
+        lore.add("§7Time: §e§l" + skyHighTime + "min");
+        lore.add("§7Damage: §c§l" + skyHighDamage + "❤");
+        lore.add("");
+        lore.add("§e§l» §r§7Status: " + (skyHighEnabled ? "§aEnabled" : "§cDisabled"));
+        lore.add("");
+        lore.add("§c[i] §6Configurable scenario");
+        lore.add("");
+        lore.add("§6§l» §r§eLeft-click: §aActivate§e/§cDeactivate");
+        lore.add("§6§l» §r§eRight-click to configure");
+        
+        meta.setLore(lore);
+        
+        if (skyHighEnabled) {
+            meta.addEnchant(Enchantment.LUCK, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
+        
+        ladder.setItemMeta(meta);
+        return ladder;
+    }
+    private void openSkyHighConfigMenu(Player player) {
+        Inventory menu = Bukkit.createInventory(null, 9, "SkyHigh Configuration");
+        
+        // Damage configuration (Apple)
+        ItemStack apple = new ItemStack(Material.APPLE);
+        ItemMeta appleMeta = apple.getItemMeta();
+        appleMeta.setDisplayName("§eDamage Configuration");
+        appleMeta.setLore(Arrays.asList(
+            "",
+            "§7Current Damage: §c" + skyHighDamage + "❤",
+            "",
+            "§6§l» §eLeft-Click: §c+0.5❤",
+            "§6§l» §eRight-Click: §c-0.5❤"
+        ));
+        apple.setItemMeta(appleMeta);
+        menu.setItem(3, apple);
+        
+        // Time configuration (Clock)
+        ItemStack clock = new ItemStack(Material.WATCH);
+        ItemMeta clockMeta = clock.getItemMeta();
+        clockMeta.setDisplayName("§eTime Configuration");
+        clockMeta.setLore(Arrays.asList(
+            "",
+            "§7Current Time: §e" + skyHighTime + "min",
+            "",
+            "§6§l» §eLeft-Click: §a+1min",
+            "§6§l» §eRight-Click: §c-1min"
+        ));
+        clock.setItemMeta(clockMeta);
+        menu.setItem(5, clock);
+        
+        // Back button
+        ItemStack back = new ItemStack(Material.ARROW);
+        ItemMeta backMeta = back.getItemMeta();
+        backMeta.setDisplayName("§cBack to Scenarios");
+        back.setItemMeta(backMeta);
+        menu.setItem(8, back);
+        
+        player.openInventory(menu);
+    }
     private boolean noCleanUpEnabled = false;
     private double noCleanUpHearts = 4.0; // Default value
     public boolean isNoCleanUpEnabled() {
@@ -520,7 +614,7 @@ public class gameconfig implements Listener {
         lore.add("§8Configuration:");
         lore.add("§7Regeneration: §c" + noCleanUpHearts + " §c§l❤");
         lore.add("");
-        lore.add("§e» §7Status: " + (noCleanUpEnabled ? "§aEnabled" : "§cDisabled"));
+        lore.add("§e§l» §7Status: " + (noCleanUpEnabled ? "§aEnabled" : "§cDisabled"));
         lore.add("");
         lore.add("§c[i] §6Configurable scenario");
         lore.add("");
@@ -1308,6 +1402,20 @@ public class gameconfig implements Listener {
                         player.sendMessage("§eNoCleanUp scenario: " + status);
                     }
                     event.setCancelled(true);
+                } else if (item.getType() == Material.LADDER && item.getItemMeta().getDisplayName().equals("§eSkyHigh")) {
+                    if (event.getClick().isRightClick()) {
+                        openSkyHighConfigMenu(player);
+                    } else {
+                        skyHighEnabled = !skyHighEnabled;
+                        plugin.getConfig().set("scenarios.sky_high.enabled", skyHighEnabled);
+                        plugin.saveConfig();
+                        
+                        event.getInventory().setItem(event.getSlot(), createSkyHighItem());
+                        
+                        String status = skyHighEnabled ? "§aENABLED" : "§cDISABLED";
+                        player.sendMessage("§eSkyHigh scenario: " + status);
+                    }
+                    event.setCancelled(true);
                 }
 
 
@@ -1367,6 +1475,35 @@ public class gameconfig implements Listener {
                 openScenariosMenu(player);
             }
         }
+        if (event.getView().getTitle().equals("SkyHigh Configuration")) {
+            event.setCancelled(true);
+            
+            if (item.getType() == Material.APPLE) {
+                if (event.getClick().isLeftClick()) {
+                    skyHighDamage += 0.5;
+                } else if (event.getClick().isRightClick()) {
+                    skyHighDamage = Math.max(0.5, skyHighDamage - 0.5);
+                }
+                
+                plugin.getConfig().set("scenarios.sky_high.damage", skyHighDamage);
+                plugin.saveConfig();
+                
+                openSkyHighConfigMenu(player);
+            } else if (item.getType() == Material.WATCH) {
+                if (event.getClick().isLeftClick()) {
+                    skyHighTime++;
+                } else if (event.getClick().isRightClick()) {
+                    skyHighTime = Math.max(1, skyHighTime - 1);
+                }
+                
+                plugin.getConfig().set("scenarios.sky_high.time", skyHighTime);
+                plugin.saveConfig();
+                
+                openSkyHighConfigMenu(player);
+            } else if (item.getType() == Material.ARROW) {
+                openScenariosMenu(player);
+            }
+        }
 
         // Handle gamemode changes
         if (event.getView().getTitle().contains("Game Modes")) {
@@ -1380,7 +1517,7 @@ public class gameconfig implements Listener {
             } else if (item.getType() == Material.ARROW) {
                 openScenariosMenu(player);
             }
-    }
+        }
     }
     public boolean isSuperHeroesEnabled() {
         return superHeroesEnabled;

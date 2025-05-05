@@ -196,6 +196,13 @@ public class ScoreboardHandler implements Listener {
             String formattedNetheribusTime = String.format("%02d:%02d", minutes, seconds);
             simpleScoreboard.add("§eNetheriBus: §b" + formattedNetheribusTime, 12);
         }
+        if (gameconfig.isSkyHighEnabled() && !gameconfig.isSkyHighActive()) {
+            int countdown = gameconfig.getSkyHighCountdown();
+            int minutes = countdown / 60;
+            int seconds = countdown % 60;
+            String formattedSkyHighTime = String.format("%02d:%02d", minutes, seconds);
+            simpleScoreboard.add("§eSkyHigh: §b" + formattedSkyHighTime, 12);
+        }
         simpleScoreboard.add("§ePvP : §b" + formattedPvPTime, 11);
         simpleScoreboard.add("§eMeetup : §b" + formattedMeetupTime, 10);
         simpleScoreboard.add("§7--Border size--", 9);

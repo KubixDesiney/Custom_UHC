@@ -66,6 +66,9 @@ import decoration.ScoreboardHandler;
 	    public void onGameStart(GameStartEvent e) {
 	        startHealthDisplayUpdater();
 	    	setupPlayerDisplayNames();
+	    	if (gameconfig.getInstance().isSkyHighEnabled()) {
+	    	    startSkyHighCountdown(gameconfig.getInstance().getSkyHighTime() * 60);
+	    	}
 	        if (gameconfig.getInstance().isNetheribusEnabled()) {
 	            int timeInMinutes = gameconfig.getInstance().getNetheribusTime();
 	            startNetheribusCountdown(timeInMinutes * 60);
@@ -132,6 +135,68 @@ import decoration.ScoreboardHandler;
 	    	}
 	        showHealthInTablist();
 	        teleportTeamsToRandomLocation();
+	    }
+	    private void startSkyHighCountdown(int initialSeconds) {
+	        // Create a final array to hold the mutable seconds value
+	        final int[] seconds = {initialSeconds};
+	        
+	        new BukkitRunnable() {
+	            @Override
+	            public void run() {
+	                if (Gamestatus.getStatus() != 1) {
+	                    cancel();
+	                    return;
+	                }
+	                
+	                if (seconds[0] > 0) {
+	                    seconds[0]--;
+	                    
+	                    int minutes = seconds[0] / 60;
+	                    int remainingSeconds = seconds[0] % 60;
+	                    
+	                    // Countdown announcements
+	                    if (seconds[0] == 300) { // 5 minutes
+	                        Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eSkyHigh will activate in §b5:00 §eminutes.");
+	                    } else if (seconds[0] == 60) { // 1 minute
+	                        Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eSkyHigh will activate in §b1:00 §eminute.");
+	                    } else if (seconds[0] <= 10 && seconds[0] > 0) {
+	                        Sound sound = Sound.valueOf("BLOCK_NOTE_PLING");
+	                        for (Player p : Bukkit.getOnlinePlayers()) {
+	                            p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
+	                        }
+	                        Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eSkyHigh in §b" + 
+	                            String.format("%02d:%02d", minutes, remainingSeconds) + " §eseconds!");
+	                    }
+	                } else if (seconds[0] == 0) {
+	                    Bukkit.broadcastMessage("§e§lUHC §r§8➢ §cSkyHigh has activated! Climb above y:200 or take damage!");
+	                    
+	                    // Start damage task
+	                    startSkyHighDamageTask();
+	                    cancel();
+	                }
+	            }
+	        }.runTaskTimer(plugin, 0L, 20L);
+	    }
+
+	    private void startSkyHighDamageTask() {
+	        new BukkitRunnable() {
+	            @Override
+	            public void run() {
+	                if (Gamestatus.getStatus() != 1) {
+	                    cancel();
+	                    return;
+	                }
+	                
+	                double damage = gameconfig.getInstance().getSkyHighDamage();
+	                
+	                for (Player player : Bukkit.getOnlinePlayers()) {
+	                    if (player.getLocation().getY() < 200) {
+	                        player.damage(damage);
+	                        player.sendMessage("§cYou're taking damage from SkyHigh! Climb above y:200!");
+	                    }
+	                }
+	            }
+	        }.runTaskTimer(plugin, 0L, 600L); // Every 30 seconds (600 ticks)
 	    }
 	    private void selectKings() {
 	        UHCTeamManager teamManager = ((main) plugin).getTeamManager();
@@ -204,9 +269,9 @@ import decoration.ScoreboardHandler;
 	                    
 	                    // Countdown announcements
 	                    if (currentCountdown == 300) { // 5 minutes
-	                        Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eNetheribus will activate in §b5:00 §eminutes.");
+	                        Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eNetheribus will activate in §b5 §eminutes.");
 	                    } else if (currentCountdown == 60) { // 1 minute
-	                        Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eNetheribus will activate in §b1:00 §eminute.");
+	                        Bukkit.broadcastMessage("§e§lUHC §r§8➢ §eNetheribus will activate in §b1 §eminute.");
 	                    } else if (currentCountdown <= 10 && currentCountdown > 0) {
 	                        Sound sound = Sound.valueOf("BLOCK_NOTE_PLING");
 	                        for (Player p : Bukkit.getOnlinePlayers()) {
@@ -456,7 +521,6 @@ import decoration.ScoreboardHandler;
 	            }
 
 	            player.updateInventory();
-	            player.sendMessage(ChatColor.GREEN + "§aYou received the starting items!");
 	        }
 	    }
 
@@ -466,7 +530,6 @@ import decoration.ScoreboardHandler;
 	        for (Player player : Bukkit.getOnlinePlayers()) {
 	            Bukkit.getLogger().info("[DEBUG] Processing " + player.getName());
 	            player.getInventory().addItem(createGoneFishinRod());
-	            player.sendMessage(ChatColor.AQUA + "You received a Gone Fishin' rod!");
 	        }
 	    }
 
@@ -528,7 +591,6 @@ import decoration.ScoreboardHandler;
 	            for (Player player : Bukkit.getOnlinePlayers()) {
 	                Location randomLocation = getRandomLocationInWorld();
 	                player.teleport(randomLocation);
-	                player.sendMessage(ChatColor.GREEN + "You have been teleported to a random location.");
 	            }
 	        } else {
 	            // Team mode - teleport teams together
@@ -541,7 +603,6 @@ import decoration.ScoreboardHandler;
 	                    for (Player player : teamPlayers) {
 	                        Bukkit.getLogger().info("Teleporting player: " + player.getName());
 	                        player.teleport(randomLocation);
-	                        player.sendMessage(ChatColor.GREEN + "You have been teleported to your team's random location.");
 	                    }
 	                }
 	            }
