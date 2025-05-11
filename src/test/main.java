@@ -8,6 +8,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
 
 import Rules.gameconfig;
 import commands.CommandCenter;
@@ -39,6 +40,10 @@ public class main extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        ScoreboardManager scoreboardManager = Bukkit.getScoreboardManager();
+        if (scoreboardManager != null) {
+            Scoreboard scoreboard = scoreboardManager.getMainScoreboard();
+        }
         instance = this;
         this.saveDefaultConfig();
         this.reloadConfig();
@@ -88,7 +93,7 @@ public class main extends JavaPlugin {
         getCommand("enchant").setExecutor(commandCenter);
         getCommand("team").setExecutor(commandCenter);
         getCommand("mod").setExecutor(commandCenter);
-        
+        getCommand("scenario").setExecutor(commandCenter);
         // Register events
         getServer().getPluginManager().registerEvents(safeMinerListener, this);
         getServer().getPluginManager().registerEvents(teamEliminationListener, this);
@@ -164,4 +169,5 @@ public class main extends JavaPlugin {
     public DamageTracker getDamageTracker() {
         return damageTracker;
     }
+    
 }

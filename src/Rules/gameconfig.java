@@ -20,6 +20,10 @@ import org.bukkit.block.BlockState;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -50,7 +54,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.Potion;
+import org.bukkit.potion.PotionType;
+
 import com.connorlinfoot.titleapi.TitleAPI;
 
 import decoration.ScoreboardHandler;
@@ -64,6 +71,7 @@ import teams.UHCTeamManager;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -112,6 +120,7 @@ public class gameconfig implements Listener {
     private static int teamSize = 1;
     private static int pvpTime = 0;
     private static int meetupTime=0;
+    private final UHCTeamManager teamManager;
     private static int Slot = Bukkit.getMaxPlayers();
     UHCTeamManager manager = ((main) Bukkit.getPluginManager().getPlugin("Custom_UHC")).getTeamManager();
     private final main plugin; 
@@ -120,6 +129,7 @@ public class gameconfig implements Listener {
     	instance=this;
     	this.switchUHC = new SwitchUHC(plugin.getTeamManager());
         this.plugin = plugin;
+        this.teamManager = plugin.getTeamManager();
         this.teamSelectionSystem = new TeamSelectionSystem(manager, plugin);
      // In the constructor, replace the drop rates initialization with:
         dropRates.put("APPLE", 0);        // 0% bonus (vanilla rate)
@@ -398,7 +408,13 @@ public class gameconfig implements Listener {
     private boolean cutCleanEnabled = false;
     public void openScenariosMenu(Player player) {
         Inventory scenariosMenu = Bukkit.createInventory(null, 54, ChatColor.GOLD + "Scenarios - Page 1");
-
+        if (gamemode.getMode() == 0) { // Mole UHC mode
+            // Only show allowed scenarios
+            addItem2(scenariosMenu, 0, createCutCleanItem());
+            addItem2(scenariosMenu, 1, createSafeMinerItem());
+            addItem2(scenariosMenu, 2, createCatEyesItem());
+            addItem2(scenariosMenu, 3, createNoCleanUpItem());
+        } else {
         // Wagons
         addItem1(scenariosMenu, 2, Material.STORAGE_MINECART, "§eComing soon...");
         addItem1(scenariosMenu, 6, Material.EXPLOSIVE_MINECART, "§eGamemode selection", "§7Click to open the Gamemode menu.");
@@ -462,7 +478,7 @@ public class gameconfig implements Listener {
         // Navigation
         addItem1(scenariosMenu, 49, Material.ARROW, "§cReturn to Main Menu");
         addItem1(scenariosMenu, 50, Material.PAPER, "§eNext Page");
-
+        }
         player.openInventory(scenariosMenu);
     } 
     public void openScenariosMenuPage2(Player player) {
@@ -496,6 +512,135 @@ public class gameconfig implements Listener {
         addItem1(scenariosMenu, 49, Material.PAPER, "§ePrevious Page");
         
         player.openInventory(scenariosMenu);
+    }
+    public void openEnabledScenariosMenu(Player player, int page) {
+        List<ItemStack> enabledScenarios = new ArrayList<>();
+        
+        // Collect all enabled scenarios
+        if (cutCleanEnabled) enabledScenarios.add(createCutCleanItem());
+        if (skyHighEnabled) enabledScenarios.add(createSkyHighItem());
+        if (noCleanUpEnabled) enabledScenarios.add(createNoCleanUpItem());
+        if (kingsEnabled) enabledScenarios.add(createKingsItem());
+        if (netheribusEnabled) enabledScenarios.add(createNetheribusItem());
+        if (safeMinerEnabled) enabledScenarios.add(createSafeMinerItem());
+        if (superHeroesEnabled) enabledScenarios.add(createSuperHeroesItem());
+        if (masterLevelEnabled) enabledScenarios.add(createMasterLevelItem());
+        if (doubleHealthEnabled) enabledScenarios.add(createDoubleHealthItem());
+        if (catEyesEnabled) enabledScenarios.add(createCatEyesItem());
+        if (goneFishinEnabled) enabledScenarios.add(createGoneFishinItem());
+
+        int itemsPerPage = 28; // 7 rows × 4 columns (excluding borders)
+        int totalPages = (int) Math.ceil((double) enabledScenarios.size() / itemsPerPage);
+        
+        Inventory menu = Bukkit.createInventory(null, 54, ChatColor.GOLD + "Enabled Scenarios - Page " + (page+1));
+
+        // Add glass panes around the border
+        ItemStack glassPane = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 7);
+        ItemMeta glassMeta = glassPane.getItemMeta();
+        glassMeta.setDisplayName(" ");
+        glassPane.setItemMeta(glassMeta);
+        
+        // Fill borders with glass panes
+        for (int i = 0; i < 9; i++) {
+            menu.setItem(i, glassPane); // Top row
+            menu.setItem(i + 45, glassPane); // Bottom row
+        }
+        for (int i = 9; i <= 36; i += 9) {
+            menu.setItem(i, glassPane); // Left column
+            menu.setItem(i + 8, glassPane); // Right column
+        }
+
+        // Add enabled scenarios
+        int startIndex = page * itemsPerPage;
+        int endIndex = Math.min(startIndex + itemsPerPage, enabledScenarios.size());
+        int slot = 10; // Start from second row, second column
+        
+        for (int i = startIndex; i < endIndex; i++) {
+            if (slot >= 43) break; // Stop before bottom row
+            menu.setItem(slot, enabledScenarios.get(i));
+            slot++;
+            // Skip last column (reserved for navigation)
+            if ((slot - 9) % 9 == 7) slot += 2;
+        }
+
+        // Add navigation buttons
+        if (page > 0) {
+            ItemStack prevPage = new ItemStack(Material.ARROW);
+            ItemMeta prevMeta = prevPage.getItemMeta();
+            prevMeta.setDisplayName(ChatColor.YELLOW + "Previous Page");
+            prevPage.setItemMeta(prevMeta);
+            menu.setItem(48, prevPage);
+        }
+        
+        if (page < totalPages - 1) {
+            ItemStack nextPage = new ItemStack(Material.ARROW);
+            ItemMeta nextMeta = nextPage.getItemMeta();
+            nextMeta.setDisplayName(ChatColor.YELLOW + "Next Page");
+            nextPage.setItemMeta(nextMeta);
+            menu.setItem(50, nextPage);
+        }
+
+        player.openInventory(menu);
+    }
+    @EventHandler
+    public void onScenarioMenuClick(InventoryClickEvent event) {
+        if (event.getView().getTitle().startsWith(ChatColor.GOLD + "Enabled Scenarios - Page")) {
+            event.setCancelled(true);
+            Player player = (Player) event.getWhoClicked();
+            ItemStack clicked = event.getCurrentItem();
+
+            if (clicked == null) return;
+
+            int currentPage = Integer.parseInt(event.getView().getTitle().split(" - Page ")[1]) - 1;
+            
+            if (clicked.getType() == Material.ARROW) {
+                if (clicked.getItemMeta().getDisplayName().contains("Previous")) {
+                    openEnabledScenariosMenu(player, currentPage - 1);
+                } else if (clicked.getItemMeta().getDisplayName().contains("Next")) {
+                    openEnabledScenariosMenu(player, currentPage + 1);
+                }
+            }
+        }
+    }
+    private static int molesPerTeam = 1;
+    private static int moleAnnounceTime = 5; // Minutes
+    private static final Set<String> allowedMoleScenarios = new HashSet<>(Arrays.asList(
+        "CutClean", "CatEyes", "SafeMiner", "NoBreak", "NoCleanUP"
+    ));
+    private void openMoleConfigMenu(Player player) {
+        Inventory menu = Bukkit.createInventory(null, 9, "Mole UHC Configuration");
+        
+        // Moles per team
+        ItemStack moleHead = new ItemStack(Material.SKULL_ITEM, Math.max(1, molesPerTeam), (short) 3);
+        ItemMeta headMeta = moleHead.getItemMeta();
+        headMeta.setDisplayName("§eMoles per Team");
+        headMeta.setLore(Arrays.asList(
+            "§7Left-Click: §a+1",
+            "§7Right-Click: §c-1",
+            "§eCurrent: §b" + molesPerTeam
+        ));
+        moleHead.setItemMeta(headMeta);
+        menu.setItem(2, moleHead);
+
+        // Announce time
+        ItemStack clock = new ItemStack(Material.WATCH);
+        ItemMeta clockMeta = clock.getItemMeta();
+        clockMeta.setDisplayName("§eMole Announce Time");
+        clockMeta.setLore(Arrays.asList(
+            "§7Left-Click: §a+1 minute",
+            "§7Right-Click: §c-1 minute",
+            "§eCurrent: §b" + moleAnnounceTime + " minutes"
+        ));
+        clock.setItemMeta(clockMeta);
+        menu.setItem(6, clock);
+
+        // Back button
+        ItemStack back = new ItemStack(Material.ARROW);
+        ItemMeta backMeta = back.getItemMeta();
+        backMeta.setDisplayName("§cBack");
+        menu.setItem(8, back);
+
+        player.openInventory(menu);
     }
     private static boolean skyHighEnabled = false;
     private static int skyHighTime = 45; // Default 45 minutes
@@ -2294,6 +2439,87 @@ public class gameconfig implements Listener {
             }
         }
             }
+    private void disableNonMoleScenarios() {
+        cutCleanEnabled = false;
+        catEyesEnabled = false;
+        safeMinerEnabled = false;
+        noBreakEnabled = false;
+        noCleanUpEnabled = false;
+        
+        // Enable allowed scenarios
+        for (String scenario : allowedMoleScenarios) {
+            switch(scenario) {
+                case "CutClean": cutCleanEnabled = true; break;
+                case "CatEyes": catEyesEnabled = true; break;
+                case "SafeMiner": safeMinerEnabled = true; break;
+                case "NoBreak": noBreakEnabled = true; break;
+                case "NoCleanUP": noCleanUpEnabled = true; break;
+            }
+        }
+    }
+    private void startMoleAnnouncementTimer() {
+        new BukkitRunnable() {
+            int timeLeft = moleAnnounceTime * 60;
+            
+            @Override
+            public void run() {
+                if (Gamestatus.getStatus() != 1) {
+                    cancel();
+                    return;
+                }
+                
+                if (timeLeft-- <= 0) {
+                    selectMoles();
+                    cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    private void selectMoles() {
+        for (String team : teamManager.getAllTeams()) {
+            List<Player> members = teamManager.getPlayersInTeam(team);
+            Collections.shuffle(members);
+            
+            for (int i = 0; i < Math.min(molesPerTeam, members.size()); i++) {
+                Player mole = members.get(i);
+                makeMole(mole);
+            }
+        }
+    }
+
+    private void makeMole(Player player) {
+        // Create mole team
+        teamManager.createMoleTeam(player);
+        
+        // Give items and instructions
+        player.sendTitle("§4§lYOU ARE A MOLE!", "§7Use /mole commands!", 20, 100, 20);
+        player.playSound(player.getLocation(), Sound.ENTITY_ENDERDRAGON_GROWL, 1f, 1f);
+        
+        // Give mole kit
+        giveMoleKit(player);
+    }
+    private void giveMoleKit(Player player) {
+        // Clear existing inventory
+        player.getInventory().clear();
+        
+        // Add mole-specific items
+        ItemStack sword = new ItemStack(Material.IRON_SWORD);
+        ItemMeta swordMeta = sword.getItemMeta();
+        swordMeta.setDisplayName("§4Mole's Dagger");
+        swordMeta.addEnchant(Enchantment.DAMAGE_ALL, 2, true);
+        sword.setItemMeta(swordMeta);
+
+        ItemStack potion = new ItemStack(Material.POTION);
+        PotionMeta potionMeta = (PotionMeta) potion.getItemMeta();
+       
+        potionMeta.setDisplayName("§cPoisonous Brew");
+        potion.setItemMeta(potionMeta);
+
+        player.getInventory().addItem(sword);
+        player.getInventory().addItem(potion);
+        player.getInventory().addItem(new ItemStack(Material.GOLDEN_APPLE, 3));
+    }
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
     	if (Gamestatus.getStatus() != 1) {
@@ -2817,6 +3043,7 @@ public class gameconfig implements Listener {
     	        }
     	    }.runTaskTimer(Bukkit.getPluginManager().getPlugin("Custom_UHC"), 0L, 20L);
     	}
+     
      private static int netheribusCountdown = 0;
      private static boolean netheribusActive = false;
 

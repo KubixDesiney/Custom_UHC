@@ -5,6 +5,13 @@ main: test.main
 api-version: "1.13"
 depend: [ProtocolLib, TitleAPI]
 commands:
+   mole:
+      description: Mole commands
+      usage: /mole [reveal|chat|kit]
+   scenario:
+      description: Show scenarios
+      usage: /scenario
+      aliases: [sc,scenarios] 
    healall:
       description: Heal everybody
       usage: /<commands>

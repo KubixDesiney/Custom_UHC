@@ -11,8 +11,9 @@ import org.bukkit.scoreboard.Team;
 import java.util.*;
 
 public class UHCTeamManager {
+   
     private final Map<String, TeamData> teams = new HashMap<>();
-    private final static Map<UUID, String> playerTeams = new HashMap<>();
+    public final static Map<UUID, String> playerTeams = new HashMap<>();
     private static Scoreboard scoreboard = null;
     private final ConfigManager configManager;
     public static List<Player> getPlayersInTeam(String teamName) {
@@ -131,6 +132,21 @@ public class UHCTeamManager {
             // Also set the team color in scoreboard
             team.setPrefix(ChatColor.translateAlternateColorCodes('&', prefix));
         }
+    }
+    public void createMoleTeam(Player mole) {
+        String teamName = "Mole-" + UUID.randomUUID().toString().substring(0,4);
+        Team team = scoreboard.registerNewTeam(teamName);
+        team.setPrefix(ChatColor.DARK_RED + "☠ ");
+        team.addEntry(mole.getName());
+        playerTeams.put(mole.getUniqueId(), teamName);
+        
+        // Add team to internal storage
+        teams.put(teamName, new TeamData(
+            teamName, 
+            ChatColor.DARK_RED.toString(), 
+            1, 
+            team
+        ));
     }
     public TeamData getTeamData(String teamName) {
         return teams.get(teamName);  // Returns the TeamData for the specified team

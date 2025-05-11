@@ -93,6 +93,11 @@ public class CommandCenter implements CommandExecutor{
 				}
 			}
 		}
+        if (cmd.getName().equalsIgnoreCase("sc") || cmd.getName().equalsIgnoreCase("scenario") || cmd.getName().equalsIgnoreCase("scenarios")) {
+            if (sender instanceof Player) {
+                gameconfig.getInstance().openEnabledScenariosMenu((Player) sender, 0);
+            }
+        }
 		if (cmd.getName().equalsIgnoreCase("Mode")) {
 			if (args.length !=1) {
 				Player player = (Player) sender;
