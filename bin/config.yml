@@ -72,3 +72,12 @@ drop_rates:
     XP_BOTTLE: 30
     ENDER_PEARL: 8
 spectator_mode: false
+mysql:
+  host: "localhost"
+  port: 3306
+  database: "uhc_network"
+  username: "root"
+  password: "password"
+  table: "uhc_servers"
+  server_id: "uhc" # unique identifier for this server
+  sync_interval_seconds: 5

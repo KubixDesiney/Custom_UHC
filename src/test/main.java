@@ -11,6 +11,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
 
 import Rules.gameconfig;
+import Sync.UHCStatusSQLSync;
 import commands.CommandCenter;
 import decoration.ScoreboardHandler;
 import events.events;
@@ -40,6 +41,8 @@ public class main extends JavaPlugin {
 
     @Override
     public void onEnable() {
+    	saveDefaultConfig(); // makes sure config.yml exists
+    	new UHCStatusSQLSync(this).start();
         ScoreboardManager scoreboardManager = Bukkit.getScoreboardManager();
         if (scoreboardManager != null) {
             Scoreboard scoreboard = scoreboardManager.getMainScoreboard();

@@ -133,21 +133,6 @@ public class UHCTeamManager {
             team.setPrefix(ChatColor.translateAlternateColorCodes('&', prefix));
         }
     }
-    public void createMoleTeam(Player mole) {
-        String teamName = "Mole-" + UUID.randomUUID().toString().substring(0,4);
-        Team team = scoreboard.registerNewTeam(teamName);
-        team.setPrefix(ChatColor.DARK_RED + "☠ ");
-        team.addEntry(mole.getName());
-        playerTeams.put(mole.getUniqueId(), teamName);
-        
-        // Add team to internal storage
-        teams.put(teamName, new TeamData(
-            teamName, 
-            ChatColor.DARK_RED.toString(), 
-            1, 
-            team
-        ));
-    }
     public TeamData getTeamData(String teamName) {
         return teams.get(teamName);  // Returns the TeamData for the specified team
     }

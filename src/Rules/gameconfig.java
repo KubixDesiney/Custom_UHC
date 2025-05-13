@@ -2238,6 +2238,20 @@ public class gameconfig implements Listener {
         player.performCommand("worldborder set "  + somme);
         System.out.println("World border set to " + somme);
     }
+    public List<String> getEnabledScenarioNames() {
+        List<String> list = new java.util.ArrayList<>();
+        if (isCatEyesEnabled()) list.add("CatEyes");
+        if (isNoCleanUpEnabled()) list.add("NoCleanUp");
+        if (isSuperHeroesEnabled()) list.add("SuperHeroes");
+        if (isGoneFishinEnabled()) list.add("GoneFishin");
+        if (isKingsEnabled()) list.add("Kings");
+        if (isSkyHighEnabled()) list.add("SkyHigh");
+        if (isDoubleHealthEnabled()) list.add("DoubleHealth");
+        if (isSafeMinerEnabled()) list.add("SafeMiner");
+        if (isMasterLevelEnabled()) list.add("MasterLevel");
+        if (isNetheribusEnabled()) list.add("Netheribus");
+        return list;
+    }
     @EventHandler
     public void onInventoryClick2(InventoryClickEvent event) {
         if (event.getView().getTitle().equals(ChatColor.GRAY + "Initial Border")) {
@@ -2439,87 +2453,6 @@ public class gameconfig implements Listener {
             }
         }
             }
-    private void disableNonMoleScenarios() {
-        cutCleanEnabled = false;
-        catEyesEnabled = false;
-        safeMinerEnabled = false;
-        noBreakEnabled = false;
-        noCleanUpEnabled = false;
-        
-        // Enable allowed scenarios
-        for (String scenario : allowedMoleScenarios) {
-            switch(scenario) {
-                case "CutClean": cutCleanEnabled = true; break;
-                case "CatEyes": catEyesEnabled = true; break;
-                case "SafeMiner": safeMinerEnabled = true; break;
-                case "NoBreak": noBreakEnabled = true; break;
-                case "NoCleanUP": noCleanUpEnabled = true; break;
-            }
-        }
-    }
-    private void startMoleAnnouncementTimer() {
-        new BukkitRunnable() {
-            int timeLeft = moleAnnounceTime * 60;
-            
-            @Override
-            public void run() {
-                if (Gamestatus.getStatus() != 1) {
-                    cancel();
-                    return;
-                }
-                
-                if (timeLeft-- <= 0) {
-                    selectMoles();
-                    cancel();
-                }
-            }
-        }.runTaskTimer(plugin, 0L, 20L);
-    }
-
-    private void selectMoles() {
-        for (String team : teamManager.getAllTeams()) {
-            List<Player> members = teamManager.getPlayersInTeam(team);
-            Collections.shuffle(members);
-            
-            for (int i = 0; i < Math.min(molesPerTeam, members.size()); i++) {
-                Player mole = members.get(i);
-                makeMole(mole);
-            }
-        }
-    }
-
-    private void makeMole(Player player) {
-        // Create mole team
-        teamManager.createMoleTeam(player);
-        
-        // Give items and instructions
-        player.sendTitle("§4§lYOU ARE A MOLE!", "§7Use /mole commands!", 20, 100, 20);
-        player.playSound(player.getLocation(), Sound.ENTITY_ENDERDRAGON_GROWL, 1f, 1f);
-        
-        // Give mole kit
-        giveMoleKit(player);
-    }
-    private void giveMoleKit(Player player) {
-        // Clear existing inventory
-        player.getInventory().clear();
-        
-        // Add mole-specific items
-        ItemStack sword = new ItemStack(Material.IRON_SWORD);
-        ItemMeta swordMeta = sword.getItemMeta();
-        swordMeta.setDisplayName("§4Mole's Dagger");
-        swordMeta.addEnchant(Enchantment.DAMAGE_ALL, 2, true);
-        sword.setItemMeta(swordMeta);
-
-        ItemStack potion = new ItemStack(Material.POTION);
-        PotionMeta potionMeta = (PotionMeta) potion.getItemMeta();
-       
-        potionMeta.setDisplayName("§cPoisonous Brew");
-        potion.setItemMeta(potionMeta);
-
-        player.getInventory().addItem(sword);
-        player.getInventory().addItem(potion);
-        player.getInventory().addItem(new ItemStack(Material.GOLDEN_APPLE, 3));
-    }
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
     	if (Gamestatus.getStatus() != 1) {
