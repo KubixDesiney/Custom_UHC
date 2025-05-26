@@ -60,6 +60,7 @@ import org.bukkit.potion.PotionType;
 
 import com.connorlinfoot.titleapi.TitleAPI;
 
+import Sync.MySQLManager;
 import decoration.ScoreboardHandler;
 import events.GameStartEvent;
 import events.TeamSizeChangedEvent;
@@ -69,6 +70,9 @@ import gamemodes.gamemode;
 import teams.TeamSelectionSystem;
 import teams.UHCTeamManager;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -121,10 +125,13 @@ public class gameconfig implements Listener {
     private static int pvpTime = 0;
     private static int meetupTime=0;
     private final UHCTeamManager teamManager;
+    private final MySQLManager mysql;
+    private Connection conn() { return mysql.getConnection(); }
     private static int Slot = Bukkit.getMaxPlayers();
     UHCTeamManager manager = ((main) Bukkit.getPluginManager().getPlugin("Custom_UHC")).getTeamManager();
     private final main plugin; 
     public gameconfig(main plugin) {
+    	this.mysql = plugin.getMySQL();
     	spectatorModeEnabled = plugin.getConfig().getBoolean("spectator_mode", false);
     	instance=this;
     	this.switchUHC = new SwitchUHC(plugin.getTeamManager());
@@ -2958,6 +2965,14 @@ public class gameconfig implements Listener {
     	            	meetupTime = meetupTime;
 	                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
 	                        onlinePlayer.playSound(onlinePlayer.getLocation(), sound2, 1.0F, 1.0F); // Play sound
+	                    }
+	                    
+	                    try (PreparedStatement ps = conn().prepareStatement(
+	                            "UPDATE uhc_players SET eliminated = TRUE WHERE eliminated = FALSE")) {
+	                        ps.executeUpdate();
+	                    } catch (SQLException ex) {
+	                        ex.printStackTrace();
+	                        plugin.getLogger().severe("Failed to mark remaining players as eliminated at meetup!");
 	                    }
 	                    Bukkit.broadcastMessage(" ");
 	                    Bukkit.broadcastMessage(" ");

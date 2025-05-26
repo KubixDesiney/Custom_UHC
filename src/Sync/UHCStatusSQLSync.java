@@ -49,7 +49,14 @@ public class UHCStatusSQLSync {
             String user = sql.getString("username");
             String pass = sql.getString("password");
 
-            String url = "jdbc:mysql://" + host + ":" + port + "/" + db + "?useSSL=false";
+            String url = "jdbc:mysql://" + host + ":" + port + "/" + db +
+                    "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+            try {
+                Class.forName("com.mysql.cj.jdbc.Driver");
+            } catch (ClassNotFoundException e) {
+                plugin.getLogger().severe("MYSQL driver class not found!");
+                e.printStackTrace();
+            }
             connection = DriverManager.getConnection(url, user, pass);
             Bukkit.getLogger().info("[UHCStatusSQLSync] Connected to MySQL.");
         } catch (SQLException e) {

@@ -11,6 +11,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
 
 import Rules.gameconfig;
+import Sync.MySQLManager;
 import Sync.UHCStatusSQLSync;
 import commands.CommandCenter;
 import decoration.ScoreboardHandler;
@@ -36,6 +37,7 @@ public class main extends JavaPlugin {
     private TeamDistanceTracker distanceTracker;
     private TeamSelectionSystem teamSelectionSystem;
     private gameconfig gameConfig;
+    private MySQLManager mysql;
     
     private static main instance;
 
@@ -81,6 +83,7 @@ public class main extends JavaPlugin {
         teamManager.clearScoreboardTeams();
         
         // Initialize commands and listeners
+        this.mysql = new MySQLManager(this);
         ScoreboardHandler scoreBoard = new ScoreboardHandler(this, teamManager);
         CommandCenter commandCenter = new CommandCenter(teamManager, scoreBoard, configManager);
         SafeMinerListener safeMinerListener = new SafeMinerListener(this, gameConfig, teamManager);
@@ -151,7 +154,9 @@ public class main extends JavaPlugin {
         getServer().getConsoleSender().sendMessage(" ");
         getServer().getConsoleSender().sendMessage(ChatColor.WHITE + "================");
     }
-
+    public MySQLManager getMySQL() {
+        return mysql;
+    }
     // Getters
     public gameconfig getGameConfig() {
         return this.gameConfig;

@@ -77,7 +77,7 @@ mysql:
   port: 3306
   database: "uhc_network"
   username: "root"
-  password: "password"
+  password: "Prince1ofwar"
   table: "uhc_servers"
   server_id: "uhc" # unique identifier for this server
   sync_interval_seconds: 5

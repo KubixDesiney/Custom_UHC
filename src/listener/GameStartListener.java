@@ -1,6 +1,10 @@
 package listener;
 
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -33,6 +37,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
@@ -48,6 +53,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import com.connorlinfoot.titleapi.TitleAPI;
 
 import Rules.gameconfig;
+import Sync.MySQLManager;
 import events.GameStartEvent;
 import events.gameEndEvent;
 import gamemodes.Gamestatus;
@@ -57,18 +63,45 @@ import decoration.ScoreboardHandler;
 
 
 	public class GameStartListener implements Listener {
+	    private final MySQLManager mysql;
 	    private final JavaPlugin plugin;
 	    private final gameconfig config;
 	    private final Map<UUID, Integer> playerPowers = new HashMap<>(); 
 	    private final Set<UUID> jumpBoostPlayers = new HashSet<>();
+	    private Connection conn() { return mysql.getConnection(); }
 
-	    public GameStartListener(JavaPlugin plugin, ScoreboardHandler scoreboardHandler,gameconfig config) {
+	    public GameStartListener(main plugin, ScoreboardHandler scoreboardHandler,gameconfig config) {
 	        this.config = config;
 	        this.plugin = plugin;
+	        this.mysql = plugin.getMySQL();
 	    }
 		
 	    @EventHandler
 	    public void onGameStart(GameStartEvent e) {
+	    	try {
+	    	    ResultSet rs = conn().createStatement().executeQuery("SELECT DATABASE()");
+	    	    if (rs.next()) {
+	    	        Bukkit.getLogger().info("Connected to database: " + rs.getString(1));
+	    	    }
+	    	} catch (SQLException ex) {
+	    	    Bukkit.getLogger().warning("Failed to fetch database name: " + ex.getMessage());
+	    	    ex.printStackTrace();
+	    	}
+	        for (Player player : Bukkit.getOnlinePlayers()) {
+	            try (PreparedStatement ps = conn().prepareStatement(
+	                    "INSERT INTO uhc_players (uuid, name, joined_at_start, eliminated, last_seen) " +
+	                    "VALUES (?, ?, TRUE, FALSE, NOW()) " +
+	                    "ON DUPLICATE KEY UPDATE joined_at_start = TRUE, eliminated = FALSE, last_seen = NOW()")) {
+	                
+	                ps.setString(1, player.getUniqueId().toString());
+	                ps.setString(2, player.getName());
+	                ps.executeUpdate();
+
+	            } catch (SQLException ex) {
+	                plugin.getLogger().severe("Failed to register player in DB: " + player.getName());
+	                ex.printStackTrace();
+	            }
+	        }
 	        startHealthDisplayUpdater();
 	    	setupPlayerDisplayNames();
 	    	gameconfig.getInstance();
@@ -143,6 +176,21 @@ import decoration.ScoreboardHandler;
 	    	}
 	        showHealthInTablist();
 	        teleportTeamsToRandomLocation();
+	    }
+	    @EventHandler
+	    public void onPlayerQuit(PlayerQuitEvent event) {
+	        Player player = event.getPlayer();
+	        event.setQuitMessage(null); // remove default
+
+	        Bukkit.broadcastMessage("§e§lUHC §f§l| §r§b" + player.getName() + " §7has left the game, he can reconnect as long as meetup time isn't due.");
+
+	        try {
+	            PreparedStatement ps = conn().prepareStatement("UPDATE uhc_players SET last_seen = NOW() WHERE uuid = ?");
+	            ps.setString(1, player.getUniqueId().toString());
+	            ps.executeUpdate();
+	        } catch (SQLException e) {
+	            e.printStackTrace();
+	        }
 	    }
 	    private void startSkyHighCountdown(int initialSeconds) {
 	        // Create a final array to hold the mutable seconds value
